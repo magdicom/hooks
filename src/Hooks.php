@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Magdicom\Hooks;
 
 class Hooks
@@ -36,10 +38,13 @@ class Hooks
      * @param int $priority
      * @return $this
      */
-    public function register(string $hookPoint, array|callable $callback, int $priority = 1): self
+    public function register(string $hookPoint,
+                             array|callable $callback,
+                             int $priority = 1): self
     {
         # Only Callable
-        if (is_callable($callback) == false && method_exists($callback[0], $callback[1]) == false)
+        if (is_callable($callback) == false
+            && method_exists($callback[0], $callback[1]) == false)
             return $this;
 
         # Need To Be Sorted
@@ -149,8 +154,9 @@ class Hooks
 
         $this->setOutput(
             call_user_func(
-                $this->prepareCallback($this->hookPoints[$hookPoint]["data"][array_key_first(
-                    $this->hookPoints[$hookPoint]["data"]
+                $this->prepareCallback($this->hookPoints[$hookPoint]["data"][
+                    array_key_first(
+                        $this->hookPoints[$hookPoint]["data"]
                 )]["callback"]),
                 $this->getParameters($parameters)
             )
@@ -212,9 +218,10 @@ class Hooks
             return $this;
 
         # Sort Via Priority
-        usort($this->hookPoints[$hookPoint]["data"], function(array $i, array $x){
-            return $i["priority"] <=> $x["priority"];
-        });
+        usort($this->hookPoints[$hookPoint]["data"],
+            function(array $i, array $x){
+                return $i["priority"] <=> $x["priority"];
+            });
 
         $this->hookPoints[$hookPoint]["sorted"] = true;
 
