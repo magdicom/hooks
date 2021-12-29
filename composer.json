@@ -24,16 +24,16 @@
     },
     "autoload": {
         "psr-4": {
-            "Magdicom\\Hooks\\": "src"
+            "Magdicom\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Magdicom\\Hooks\\Tests\\": "tests"
+            "Magdicom\\Tests\\": "tests"
         }
     },
     "scripts": {
-        "test": "vendor/bin/pest",
+        "test": "vendor\\bin\\pest",
         "test-coverage": "vendor/bin/pest --coverage",
         "format": "vendor/bin/php-cs-fixer fix --allow-risky=yes"
     },

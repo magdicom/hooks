@@ -1,6 +1,6 @@
 <?php
 
-use Magdicom\Hooks\Hooks;
+use Magdicom\Hooks;
 
 $hooks = new Hooks();
 
