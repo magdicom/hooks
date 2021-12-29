@@ -44,8 +44,7 @@ class Hooks
         string $hookPoint,
         array|callable $callback,
         int $priority = 1
-    ): self
-    {
+    ): self {
         # Only Callable
         if (is_callable($callback) == false
             && method_exists($callback[0], $callback[1]) == false) {
