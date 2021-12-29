@@ -1,16 +1,16 @@
 {
-    "name": ":vendor_slug/:package_slug",
-    "description": ":package_description",
+    "name": "magdicom/hooks",
+    "description": "This is my package hooks",
     "keywords": [
-        ":vendor_name",
-        ":package_slug"
+        "magdicom",
+        "hooks"
     ],
-    "homepage": "https://github.com/:vendor_slug/:package_slug",
+    "homepage": "https://github.com/magdicom/hooks",
     "license": "MIT",
     "authors": [
         {
-            "name": ":author_name",
-            "email": "author@domain.com",
+            "name": "magdicom",
+            "email": "m@momagdi.com",
             "role": "Developer"
         }
     ],
@@ -24,12 +24,12 @@
     },
     "autoload": {
         "psr-4": {
-            "VendorName\\Skeleton\\": "src"
+            "Magdicom\\Hooks\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "VendorName\\Skeleton\\Tests\\": "tests"
+            "Magdicom\\Hooks\\Tests\\": "tests"
         }
     },
     "scripts": {

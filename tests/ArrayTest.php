@@ -3,40 +3,47 @@ use Magdicom\Hooks\Hooks;
 
 $hooks = new Hooks;
 
-$hooks->register("Strings", function($vars){
-    return "One";
+$hooks->register("KeyValuePairs", function($vars){
+    return ["id" => "Foo"];
 }, 1)
-->register("Strings", function ($vars){
-    return "Three";
+->register("KeyValuePairs", function ($vars){
+    return ["id" => "Baz"];
 }, 3)
-->register("Strings", function ($vars){
-    return "Two";
+->register("KeyValuePairs", function ($vars){
+    return ["id" => "Bar", "name" => "John Doe"];
 }, 2);
 
-test('strings to string', function () use ($hooks) {
-    $this->assertSame("OneTwoThree", $hooks->all("Strings")->toString());
+test('KeyValuePairs -> all -> toArray', function () use ($hooks) {
+    expect($hooks->all("KeyValuePairs")->toArray())->toBe(["id" => "Baz", "name" => "John Doe"]);
 });
 
-test('strings to string with separator', function () use ($hooks) {
-    $this->assertSame("One:Two:Three", $hooks->all("Strings")->toString(":"));
+test('KeyValuePairs -> first -> toArray', function () use ($hooks)  {
+    expect($hooks->first("KeyValuePairs")->toArray())->toBe(["id" => "Foo"]);
 });
 
-test('strings to array', function () use ($hooks) {
-    $this->assertSame(["One","Two","Three"], $hooks->all("Strings")->toArray());
+test('KeyValuePairs -> last -> toArray', function () use ($hooks)  {
+    expect($hooks->last("KeyValuePairs")->toArray())->toBe(["id" => "Baz"]);
 });
 
-test('first to string', function () use ($hooks) {
-    $this->assertSame("One", $hooks->first("Strings")->toString());
+$hooks->register("Array", function($vars){
+    return [["id" => "Foo"]];
+}, 1)
+->register("Array", function ($vars){
+    return [["id" => "Baz"]];
+}, 3)
+->register("Array", function ($vars){
+    return [["id" => "Bar"]];
+}, 2);
+
+test('array -> all -> toArray', function () use ($hooks) {
+    expect($hooks->all("Array")->toArray())->toBe([["id" => "Foo"], ["id" => "Bar"], ["id" => "Baz"]]);
 });
 
-test('first to array', function () use ($hooks)  {
-    $this->assertSame(["One"], $hooks->first("Strings")->toArray());
+test('array -> first -> toArray', function () use ($hooks)  {
+    expect($hooks->first("Array")->toArray())->toBe([["id" => "Foo"]]);
 });
 
-test('last to string', function () use ($hooks) {
-    $this->assertSame("Three", $hooks->last("Strings")->toString());
+test('array -> last -> toArray', function () use ($hooks)  {
+    expect($hooks->last("Array")->toArray())->toBe([["id" => "Baz"]]);
 });
 
-test('last to array', function () use ($hooks)  {
-    $this->assertSame(["Three"], $hooks->last("Strings")->toArray());
-});

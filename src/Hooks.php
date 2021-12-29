@@ -23,6 +23,14 @@ class Hooks
     private array $output = [];
 
     /**
+     * @param array $parameters
+     */
+    public function __construct(?array $parameters = [])
+    {
+        $this->setParameters($parameters);
+    }
+
+    /**
      * @param string $hookPoint
      * @param array|callable $callback
      * @param int $priority
@@ -236,6 +244,14 @@ class Hooks
         $this->output = [];
 
         return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function __toString(): string
+    {
+        return $this->toString();
     }
 
 }

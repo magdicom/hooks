@@ -3,33 +3,31 @@ use Magdicom\Hooks\Hooks;
 
 $hooks = new Hooks;
 
-$hooks->setParameters([
-    "id" => "Foo",
-    "name" => "Bar"
-]);
-
-$hooks->register("Parameters", function($vars) use ($hooks) {
-
-    $hooks->setParameter("email", "baz@email.com");
-
-    return $vars;
+$hooks->register("Callback", function($vars) {
+    return "Closure";
 }, 1);
 
-test('Parameters -> add', function () use ($hooks) {
-    expect($hooks->all("Parameters")->toArray())
-        ->toBe(["id" => "Foo", "name" => "Bar", "email" => "baz@email.com"]);
-});
+$hooks->register("Callback", "simple_function_name", 2);
+$hooks->register("Callback", [FooBar::class, 'isStatic'], 3);
+$hooks->register("Callback", [FooBar::class, 'objectBased'], 4);
+$hooks->register("Callback", [(new FooBar), 'objectBased'], 5);
 
-$hooks->register("Parameters", function($vars){
-    return $vars;
-}, 1);
 
-test('Parameters -> temporary', function () use ($hooks) {
-    expect($hooks->all("Parameters", ["email" => "qux@email.com", "extra" => "quux"])->toArray())
-        ->toBe(["id" => "Foo", "name" => "Bar", "email" => "qux@email.com", "extra" => "quux"]);
-});
+class FooBar {
+    public function objectBased($vars){
+        return "ObjectMethod";
+    }
 
-test('Parameters -> permanent', function () use ($hooks) {
-    expect($hooks->all("Parameters")->toArray())
-        ->toBe(["id" => "Foo", "name" => "Bar", "email" => "baz@email.com"]);
+    public static function isStatic($vars){
+        return "StaticMethod";
+    }
+}
+
+function simple_function_name($vars){
+    return "SimpleFunction";
+}
+
+test('Callback -> toArray', function () use ($hooks) {
+    expect($hooks->all("Callback")->toArray())
+        ->toBe(["Closure", "SimpleFunction", "StaticMethod", "ObjectMethod", "ObjectMethod"]);
 });
