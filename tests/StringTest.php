@@ -1,15 +1,16 @@
 <?php
+
 use Magdicom\Hooks\Hooks;
 
-$hooks = new Hooks;
+$hooks = new Hooks();
 
-$hooks->register("Strings", function($vars){
+$hooks->register("Strings", function ($vars) {
     return "Foo";
 }, 1)
-->register("Strings", function ($vars){
+->register("Strings", function ($vars) {
     return "Baz";
 }, 3)
-->register("Strings", function ($vars){
+->register("Strings", function ($vars) {
     return "Bar";
 }, 2);
 
@@ -29,7 +30,7 @@ test('first to string', function () use ($hooks) {
     expect($hooks->first("Strings")->toString())->toBe("Foo");
 });
 
-test('first to array', function () use ($hooks)  {
+test('first to array', function () use ($hooks) {
     expect($hooks->first("Strings")->toArray())->toBe(["Foo"]);
 });
 
@@ -37,6 +38,6 @@ test('last to string', function () use ($hooks) {
     expect($hooks->last("Strings")->toString())->toBe("Baz");
 });
 
-test('last to array', function () use ($hooks)  {
+test('last to array', function () use ($hooks) {
     expect($hooks->last("Strings")->toArray())->toBe(["Baz"]);
 });

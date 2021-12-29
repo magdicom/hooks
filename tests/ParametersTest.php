@@ -1,15 +1,15 @@
 <?php
+
 use Magdicom\Hooks\Hooks;
 
-$hooks = new Hooks;
+$hooks = new Hooks();
 
 $hooks->setParameters([
     "id" => "Foo",
-    "name" => "Bar"
+    "name" => "Bar",
 ]);
 
-$hooks->register("Parameters", function($vars) use ($hooks) {
-
+$hooks->register("Parameters", function ($vars) use ($hooks) {
     $hooks->setParameter("email", "baz@email.com");
 
     return $vars;
@@ -20,7 +20,7 @@ test('Parameters -> add', function () use ($hooks) {
         ->toBe(["id" => "Foo", "name" => "Bar", "email" => "baz@email.com"]);
 });
 
-$hooks->register("Parameters", function($vars){
+$hooks->register("Parameters", function ($vars) {
     return $vars;
 }, 2);
 
