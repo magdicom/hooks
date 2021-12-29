@@ -22,13 +22,15 @@ class Hooks
      */
     private array $parameters = [];
 
+    /**
+     * @var array
+     */
     private array $output = [];
 
     /**
      * @param array $parameters
      */
-    public function __construct(?array $parameters = [])
-    {
+    public function __construct(?array $parameters = []) {
         $this->setParameters($parameters);
     }
 
@@ -40,12 +42,12 @@ class Hooks
      */
     public function register(string $hookPoint,
                              array|callable $callback,
-                             int $priority = 1): self
-    {
+                             int $priority = 1): self {
         # Only Callable
         if (is_callable($callback) == false
-            && method_exists($callback[0], $callback[1]) == false)
+            && method_exists($callback[0], $callback[1]) == false) {
             return $this;
+        }
 
         # Need To Be Sorted
         $this->hookPoints[$hookPoint]["sorted"] = false;
@@ -62,8 +64,7 @@ class Hooks
     /**
      * @return array
      */
-    public function toArray(): array
-    {
+    public function toArray(): array {
         return $this->output;
     }
 
@@ -71,8 +72,7 @@ class Hooks
      * @param string|null $separator
      * @return string
      */
-    public function toString(?string $separator = ""): string
-    {
+    public function toString(?string $separator = ""): string {
         return implode($separator, $this->output);
     }
 
@@ -81,8 +81,7 @@ class Hooks
      * @param mixed $value
      * @return $this
      */
-    public function setParameter(string $name, mixed $value): self
-    {
+    public function setParameter(string $name, mixed $value): self {
         $this->parameters[$name] = $value;
 
         return $this;
@@ -93,8 +92,7 @@ class Hooks
      * @param mixed $value
      * @return $this
      */
-    public function setParam(string $name, mixed $value): self
-    {
+    public function setParam(string $name, mixed $value): self {
         return $this->setParameter($name, $value);
     }
 
@@ -102,8 +100,7 @@ class Hooks
      * @param array $parameters
      * @return $this
      */
-    public function setParameters(array $parameters): self
-    {
+    public function setParameters(array $parameters): self {
         # Do Not Merge, Simply Replace
         $this->parameters = array_replace($this->parameters, $parameters);
 
@@ -114,8 +111,7 @@ class Hooks
      * @param array $parameters
      * @return $this
      */
-    public function setParams(array $parameters): self
-    {
+    public function setParams(array $parameters): self {
         return $this->setParameters($parameters);
     }
 
@@ -124,13 +120,12 @@ class Hooks
      * @param array|null $parameters
      * @return $this
      */
-    public function all(string $hookPoint, ?array $parameters = []): self
-    {
+    public function all(string $hookPoint, ?array $parameters = []): self {
         # Sort Callback and Empty Output Prop.
         $this->sort($hookPoint)
         ->resetOutput();
 
-        foreach ($this->hookPoints[$hookPoint]["data"] as $data){
+        foreach ($this->hookPoints[$hookPoint]["data"] as $data) {
             $this->setOutput(
                 call_user_func(
                     $this->prepareCallback($data["callback"]),
@@ -147,8 +142,7 @@ class Hooks
      * @param array|null $parameters
      * @return $this
      */
-    public function first(string $hookPoint, ?array $parameters = []): self
-    {
+    public function first(string $hookPoint, ?array $parameters = []): self {
         $this->sort($hookPoint)
         ->resetOutput();
 
@@ -170,8 +164,7 @@ class Hooks
      * @param array|null $parameters
      * @return $this
      */
-    public function last(string $hookPoint, ?array $parameters = []): self
-    {
+    public function last(string $hookPoint, ?array $parameters = []): self {
         $this->sort($hookPoint)
         ->resetOutput();
 
@@ -189,8 +182,7 @@ class Hooks
      * @param array $parameters
      * @return array
      */
-    private function getParameters(array $parameters): array
-    {
+    private function getParameters(array $parameters): array {
         return array_replace_recursive($this->parameters, $parameters);
     }
 
@@ -198,10 +190,10 @@ class Hooks
      * @param array|callable $callback
      * @return array|callable
      */
-    private function prepareCallback(array|callable $callback): array|callable
-    {
-        if (is_callable($callback))
+    private function prepareCallback(array|callable $callback): array|callable {
+        if (is_callable($callback)) {
             return $callback;
+        }
 
         # For Non-Callable, Create an Object
         return [(new $callback[0]), $callback[1]];
@@ -211,11 +203,11 @@ class Hooks
      * @param string $hookPoint
      * @return $this
      */
-    private function sort(string $hookPoint): self
-    {
+    private function sort(string $hookPoint): self {
         # No Need To Resorting
-        if ($this->hookPoints[$hookPoint]["sorted"])
+        if ($this->hookPoints[$hookPoint]["sorted"]) {
             return $this;
+        }
 
         # Sort Via Priority
         usort($this->hookPoints[$hookPoint]["data"],
@@ -232,12 +224,13 @@ class Hooks
      * @param mixed $output
      * @return $this
      */
-    private function setOutput(mixed $output): self
-    {
-        if (is_array($output))
+    private function setOutput(mixed $output): self {
+        if (is_array($output)) {
             $this->output = array_merge($this->output, $output);
-        else
+        }
+        else {
             $this->output[] = $output;
+        }
 
         return $this;
     }
@@ -245,8 +238,7 @@ class Hooks
     /**
      * @return $this
      */
-    private function resetOutput(): self
-    {
+    private function resetOutput(): self {
         # Todo: Need better way to empty/reinitialize the output array
         $this->output = [];
 
@@ -256,8 +248,7 @@ class Hooks
     /**
      * @return string
      */
-    public function __toString(): string
-    {
+    public function __toString(): string {
         return $this->toString();
     }
 
