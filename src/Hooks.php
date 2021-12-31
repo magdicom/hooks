@@ -218,13 +218,12 @@ class Hooks
         $this->resetOutput();
 
         # No Callback Functions Registered
-        if (isset($this->hookPoints[$hookPoint]) == false){
+        if (isset($this->hookPoints[$hookPoint]) == false) {
             return $this;
         }
 
         # Sort Callback By Priority
         return $this->sort($hookPoint);
-
     }
 
     /**
