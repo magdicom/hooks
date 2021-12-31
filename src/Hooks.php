@@ -234,7 +234,7 @@ class Hooks
     {
 
         # No Need To Resorting
-        if (isset($this->hookPoints[$hookPoint]["sorted"])) {
+        if ($this->hookPoints[$hookPoint]["sorted"]) {
             return $this;
         }
 
