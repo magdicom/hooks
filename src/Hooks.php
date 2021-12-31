@@ -27,7 +27,7 @@ class Hooks
     private array $output = [];
 
     /**
-     * @param array $parameters
+     * @param array|null $parameters
      */
     public function __construct(?array $parameters = [])
     {
@@ -106,7 +106,7 @@ class Hooks
      * @param array $parameters
      * @return $this
      */
-    public function setParameters(array $parameters): self
+    public function setParameters(array $parameters = []): self
     {
         # Do Not Merge, Simply Replace
         $this->parameters = array_replace($this->parameters, $parameters);
@@ -130,9 +130,7 @@ class Hooks
      */
     public function all(string $hookPoint, ?array $parameters = []): self
     {
-        # Sort Callback and Empty Output Prop.
-        $this->sort($hookPoint)
-        ->resetOutput();
+        $this->prepareForOutput($hookPoint);
 
         foreach ($this->hookPoints[$hookPoint]["data"] as $data) {
             $this->setOutput(
@@ -153,8 +151,7 @@ class Hooks
      */
     public function first(string $hookPoint, ?array $parameters = []): self
     {
-        $this->sort($hookPoint)
-        ->resetOutput();
+        $this->prepareForOutput($hookPoint);
 
         $this->setOutput(
             call_user_func(
@@ -176,8 +173,7 @@ class Hooks
      */
     public function last(string $hookPoint, ?array $parameters = []): self
     {
-        $this->sort($hookPoint)
-        ->resetOutput();
+        $this->prepareForOutput($hookPoint);
 
         $this->setOutput(call_user_func(
             $this->hookPoints[$hookPoint]["data"][array_key_last(
@@ -216,10 +212,30 @@ class Hooks
      * @param string $hookPoint
      * @return $this
      */
+    private function prepareForOutput(string $hookPoint): self
+    {
+        # Empty Output Prop.
+        $this->resetOutput();
+
+        # No Callback Functions Registered
+        if (isset($this->hookPoints[$hookPoint]) == false){
+            return $this;
+        }
+
+        # Sort Callback By Priority
+        return $this->sort($hookPoint);
+
+    }
+
+    /**
+     * @param string $hookPoint
+     * @return $this
+     */
     private function sort(string $hookPoint): self
     {
+
         # No Need To Resorting
-        if ($this->hookPoints[$hookPoint]["sorted"]) {
+        if (isset($this->hookPoints[$hookPoint]["sorted"])) {
             return $this;
         }
 
