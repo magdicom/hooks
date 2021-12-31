@@ -218,7 +218,7 @@ class Hooks
         $this->resetOutput();
 
         # No Callback Functions Registered
-        if (isset($this->hookPoints[$hookPoint]) == false){
+        if (isset($this->hookPoints[$hookPoint]) === false){
             return $this;
         }
 
@@ -235,7 +235,7 @@ class Hooks
     {
 
         # No Need To Resorting
-        if (isset($this->hookPoints[$hookPoint]["sorted"])) {
+        if ($this->hookPoints[$hookPoint]["sorted"]) {
             return $this;
         }
 
