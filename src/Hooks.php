@@ -130,7 +130,9 @@ class Hooks
      */
     public function all(string $hookPoint, ?array $parameters = []): self
     {
-        $this->prepareForOutput($hookPoint);
+        if ($this->preparedForOutput($hookPoint) == false) {
+            return $this;
+        }
 
         foreach ($this->hookPoints[$hookPoint]["data"] as $data) {
             $this->setOutput(
@@ -151,7 +153,9 @@ class Hooks
      */
     public function first(string $hookPoint, ?array $parameters = []): self
     {
-        $this->prepareForOutput($hookPoint);
+        if ($this->preparedForOutput($hookPoint) == false) {
+            return $this;
+        }
 
         $this->setOutput(
             call_user_func(
@@ -173,7 +177,9 @@ class Hooks
      */
     public function last(string $hookPoint, ?array $parameters = []): self
     {
-        $this->prepareForOutput($hookPoint);
+        if ($this->preparedForOutput($hookPoint) == false) {
+            return $this;
+        }
 
         $this->setOutput(call_user_func(
             $this->hookPoints[$hookPoint]["data"][array_key_last(
@@ -210,20 +216,22 @@ class Hooks
 
     /**
      * @param string $hookPoint
-     * @return $this
+     * @return bool
      */
-    private function prepareForOutput(string $hookPoint): self
+    private function preparedForOutput(string $hookPoint): bool
     {
         # Empty Output Prop.
         $this->resetOutput();
 
         # No Callback Functions Registered
         if (isset($this->hookPoints[$hookPoint]) == false) {
-            return $this;
+            return false;
         }
 
         # Sort Callback By Priority
-        return $this->sort($hookPoint);
+        $this->sort($hookPoint);
+
+        return true;
     }
 
     /**
