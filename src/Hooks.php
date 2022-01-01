@@ -125,10 +125,10 @@ class Hooks
 
     /**
      * @param string $hookPoint
-     * @param array|null $parameters
+     * @param array|object|null $parameters
      * @return $this
      */
-    public function all(string $hookPoint, ?array $parameters = []): self
+    public function all(string $hookPoint, array|object|null $parameters = []): self
     {
         if ($this->preparedForOutput($hookPoint) == false) {
             return $this;
@@ -136,7 +136,7 @@ class Hooks
 
         foreach ($this->hookPoints[$hookPoint]["data"] as $data) {
             $this->setOutput(
-                call_user_func(
+                call_user_func_array(
                     $this->prepareCallback($data["callback"]),
                     $this->getParameters($parameters)
                 )
@@ -148,17 +148,17 @@ class Hooks
 
     /**
      * @param string $hookPoint
-     * @param array|null $parameters
+     * @param array|object|null $parameters
      * @return $this
      */
-    public function first(string $hookPoint, ?array $parameters = []): self
+    public function first(string $hookPoint, array|object|null $parameters = []): self
     {
         if ($this->preparedForOutput($hookPoint) == false) {
             return $this;
         }
 
         $this->setOutput(
-            call_user_func(
+            call_user_func_array(
                 $this->prepareCallback($this->hookPoints[$hookPoint]["data"][
                     array_key_first(
                         $this->hookPoints[$hookPoint]["data"]
@@ -172,32 +172,34 @@ class Hooks
 
     /**
      * @param string $hookPoint
-     * @param array|null $parameters
+     * @param array|object|null $parameters
      * @return $this
      */
-    public function last(string $hookPoint, ?array $parameters = []): self
+    public function last(string $hookPoint, array|object|null $parameters = []): self
     {
         if ($this->preparedForOutput($hookPoint) == false) {
             return $this;
         }
 
-        $this->setOutput(call_user_func(
-            $this->hookPoints[$hookPoint]["data"][array_key_last(
-                $this->hookPoints[$hookPoint]["data"]
-            )]["callback"],
-            $this->getParameters($parameters)
-        ));
+        $this->setOutput(
+            call_user_func_array(
+                $this->hookPoints[$hookPoint]["data"][array_key_last(
+                    $this->hookPoints[$hookPoint]["data"]
+                )]["callback"],
+                $this->getParameters($parameters)
+            )
+        );
 
         return $this;
     }
 
     /**
-     * @param array $parameters
-     * @return array
+     * @param array|object|null $parameters
+     * @return array|object
      */
-    private function getParameters(array $parameters): array
+    private function getParameters(array|object|null $parameters): array|object
     {
-        return array_replace_recursive($this->parameters, $parameters);
+        return is_object($parameters) ? [$parameters, $this->parameters] : [array_replace_recursive($this->parameters, $parameters)];
     }
 
     /**

@@ -107,6 +107,32 @@ Parameters split into two types:
 + Global parameters will be available across all hook names and callbacks, and these can be defined using [`setParameter`](#methods-setparameter) and [`setParameters`](#methods-setparameters) methods.
 + Scoped parameters which will be only available to the requested hook name, and could be provided as the second argument of [`all`](#methods-all), [`first`](#methods-first) and [`last`](#methods-last) methods.
 
+**Note** instead of passing an array as the parameters you can pass an object instead, and the callback function will have two arguments passed to it instead of one, the first will be the object and the second argument will be global parameters:
+
+```php
+class FooBarBaz {
+    public $id;
+
+    public function __construct(int $id){
+        $this->id = $id;
+    }
+}
+
+$hooks = new Hooks();
+
+$hooks->setParameters([
+    "name" => "Bar",
+]);
+
+$hooks->register("ParameterAsObject", function ($fooBarBaz, $params) {
+    return [$fooBarBaz->id, $params['name']];
+});
+
+echo $hooks->all("ParameterAsObject", (new FooBarBaz(100))->toString();
+
+// Output will be
+
+```
 
 <a name="priority"></a>
 ### Priority
