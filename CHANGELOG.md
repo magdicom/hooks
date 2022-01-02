@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.4 - 2022-01-02
+
+- accept an [object](https://github.com/magdicom/hooks#parameters) as action hook parameter
+
 ## v1.0.3 - 2021-12-31
 
 - improve output handling
