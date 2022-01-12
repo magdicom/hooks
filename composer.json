@@ -1,6 +1,6 @@
 {
     "name": "magdicom/hooks",
-    "description": "This is my package hooks",
+    "description": "A lightweight PHP action hooks package.",
     "keywords": [
         "magdicom",
         "hooks"

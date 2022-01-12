@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Magdicom;
 
+
 class Hooks
 {
     /**
@@ -25,6 +26,26 @@ class Hooks
      * @var array
      */
     private array $output = [];
+
+    /**
+     * @var bool
+     */
+    private bool $debug = false;
+
+    /**
+     * When debug option enabled, the defined function will be called
+     * everytime there is an action hook callback function get registered
+     * optionally you can use the $this->setSource($filePath) to register
+     * the full path to the file holding these callbacks for better debugging
+     *
+     * @var mixed
+     */
+    private mixed $debugCallback = null;
+
+    /**
+     * @var string
+     */
+    private ?string $sourceFile = null;
 
     /**
      * @param array|null $parameters
@@ -59,6 +80,8 @@ class Hooks
             "priority" => $priority,
             "callback" => $callback,
         ];
+
+        $this->log("Register", $hookPoint, $callback, $priority);
 
         return $this;
     }
@@ -143,6 +166,8 @@ class Hooks
             );
         }
 
+        $this->log("Output-All", $hookPoint);
+
         return $this;
     }
 
@@ -167,6 +192,8 @@ class Hooks
             )
         );
 
+        $this->log("Output-First", $hookPoint);
+
         return $this;
     }
 
@@ -189,6 +216,8 @@ class Hooks
                 $this->getParameters($parameters)
             )
         );
+
+        $this->log("Output-Last", $hookPoint);
 
         return $this;
     }
@@ -256,6 +285,8 @@ class Hooks
             }
         );
 
+        $this->log("Sort", $hookPoint);
+
         $this->hookPoints[$hookPoint]["sorted"] = true;
 
         return $this;
@@ -293,5 +324,105 @@ class Hooks
     public function __toString(): string
     {
         return $this->toString();
+    }
+
+    /**
+     * Provide a callable function to enable debugging
+     * or null to disable it
+     * @param callable|null $callback
+     * @return $this
+     */
+    public function debug(callable|null $callback): self
+    {
+        $this->debug = is_callable($callback);
+        $this->debugCallback = $callback;
+
+        return $this;
+    }
+
+    /**
+     * @param string|null $path
+     * @return $this
+     */
+    public function setSourceFile(?string $path = null): self
+    {
+        $this->sourceFile = $path;
+
+        $this->log("SourceFile");
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSourceFile(): string
+    {
+        return $this->sourceFile ?? "Unknown";
+    }
+
+    /**
+     * @param string $type
+     * @param mixed $data
+     * @return $this
+     */
+    private function log(string $type, mixed ...$data): self
+    {
+        if (!$this->debug){
+            return $this;
+        }
+
+        $message = "";
+
+        switch ($type){
+            case "SourceFile":
+                $message = "+ Added Source File: " . $this->getSourceFile();
+                break;
+            case "Register":
+                $message = join(PHP_EOL, [
+                    "+ Hook Point: " . $data[0] . ", New Callback Defined:",
+                    "\t-- Source: " . $this->getSourceFile(),
+                    "\t-- Callback: " . $this->getCallbackInfo($data[1]),
+                    "\t-- Priority: " . $data[2]
+                ]);
+                break;
+            case "Sort":
+                $message = "+ Hook Point: " . $data[0] . ", Callback Functions Sorted!";
+                break;
+            case "Output-All":
+                $message = "+ Hook Point: " . $data[0] . ", Output Generated For All Callback Functions!";
+                break;
+            case "Output-First":
+                $message = "+ Hook Point: " . $data[0] . ", Output Generated For The First Callback Function!";
+                break;
+            case "Output-Last":
+                $message = "+ Hook Point: " . $data[0] . ", Output Generated For The Last Callback Function!";
+                break;
+        }
+
+        call_user_func($this->debugCallback, $message);
+
+        return $this;
+    }
+
+    /**
+     * @param array|callable $callback
+     * @return string
+     * @throws \ReflectionException
+     */
+    private function getCallbackInfo(array|callable $callback): string
+    {
+        if (is_array($callback)) {
+            if (is_object($callback[0])) {
+                return (new \ReflectionClass($callback[0]))->getName() . "::" . $callback[1];
+            }
+            return $callback[0] . "::" . $callback[1];
+        }
+
+        if (is_string($callback)){
+            return $callback;
+        }
+
+        return (new \ReflectionFunction($callback))->getName();
     }
 }
