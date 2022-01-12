@@ -44,14 +44,17 @@ test('Parameters as Object', function () use ($hooks) {
         ->toBe([100, "Bar"]);
 });
 
-class FooBarBaz {
+class FooBarBaz
+{
     public $id;
 
-    public function __construct(int $id){
+    public function __construct(int $id)
+    {
         $this->id = $id;
     }
 
-    public function getId(){
+    public function getId()
+    {
         return $this->id;
     }
 }
