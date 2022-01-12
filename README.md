@@ -45,7 +45,7 @@ This is the second line of greetings!
 
 <a name="output"></a>
 ### Output
-When you call any of [`all`](#methods-all), [`first`](#methods-first) or [`last`](#methods-last) methods, the corresponding hook functions will be executed and their output will be saved in a special property to be exported later using [`toString`](#methods-tostring) or [`toArray`](#methods-toarray) methods.
+When you call any of [`all`](#all), [`first`](#first) or [`last`](#last) methods, the corresponding hook functions will be executed and their output will be saved in a special property to be exported later using [`toString`](#tostring) or [`toArray`](#toarray) methods.
 
 <a name="callbacks"></a>
 ### Callbacks
@@ -101,13 +101,20 @@ in case this is not a static method, an object will be created and the provided 
 
 <a name="parameters"></a>
 ### Parameters
+
 With each of hook callback functions execution an array of parameters could be passed to it to help it perform the required action.
 
-Parameters split into two types:
-+ Global parameters will be available across all hook names and callbacks, and these can be defined using [`setParameter`](#methods-setparameter) and [`setParameters`](#methods-setparameters) methods.
-+ Scoped parameters which will be only available to the requested hook name, and could be provided as the second argument of [`all`](#methods-all), [`first`](#methods-first) and [`last`](#methods-last) methods.
+#### Global Parameters
 
-**Note** instead of passing an array as the parameters you can pass an object instead, and the callback function will have two arguments passed to it instead of one, the first will be the object and the second argument will be global parameters:
+Global parameters could be defined using [`setParameter`](#setparameter) and [`setParameters`](#setparameters) methods and these parameters will be available across all hook points and callbacks.
+
+#### Scoped parameters
+
+The opposite of global parameters, the scoped parameters only available for the specified action hook point, and could be provided as the second argument of [`all`](#all), [`first`](#first) and [`last`](#last) methods.
+
+When you provide it as an array, the values of scoped parameters will temporarily replace (similar key entries) global parameters and passed to the [`register`](#register) methods' callback as a merged array.
+
+When the parameter provided as a class object it will be accessible from the [`register`](#register) method as the first argument, and the global parameters will be accessible via the second argument.
 
 ```php
 class FooBarBaz {
@@ -128,27 +135,28 @@ $hooks->register("ParameterAsObject", function ($fooBarBaz, $params) {
     return [$fooBarBaz->id, $params['name']];
 });
 
-echo $hooks->all("ParameterAsObject", (new FooBarBaz(100))->toString();
+echo $hooks->all("ParameterAsObject", (new FooBarBaz(100))->toString("\n");
 
 // Output will be
-
+100
+Bar
 ```
 
 <a name="priority"></a>
 ### Priority
-When you need to ensure that certain hook functions should be executed in sequence order, here it comes `$priority` which is the 3rd and last argument of [`register`](#methods-register) method.
+When you need to ensure that certain hook functions should be executed in sequence order, here it comes `$priority` which is the 3rd and last argument of [`register`](#register) method.
 
 <a name="methods"></a>
 ### Methods
 
-<a name="methods-construct"></a>
+<a name="construct"></a>
 #### __construct
 ```php
 $hooks = new Hooks(?array $parameters);
 ```
 The class constructor method will optionally accept a name, value pair array.
 
-<a name="methods-register"></a>
+<a name="register"></a>
 #### register
 ```php
 $hooks->register(string $hookName, array|callable $callback, ?int $priority): self
@@ -159,39 +167,39 @@ Register all your hook functions via this method:
 + `$callback` only accepts [callable](https://www.php.net/manual/en/language.types.callable.php) functions.
 + `$priority` (optional) used to sort callbacks before being executed. 
 
-<a name="methods-all"></a>
+<a name="all"></a>
 #### all
 ```php
-$hooks->all(string $hookName, ?array $parameters): self
+$hooks->all(string $hookName, array|object|null $parameters): self
 ```
 Will execute all callback functions of the specified hook name, by default it will return the output as string, check [output](#output) section for more options.
 + `$hookName` the hook name you want to execute its callback functions.
-+ `$parameters` optional key, value pair array that you want to provide for all callback functions related to the same hook name.
++ `$parameters` optional key, value pair array (or object) that you want to provide for all callback functions related to the same hook point.
 
-Please Note: parameters provided via this method will be available only in the scope of the specified hook name, to specify global parameters use [`setParameter`](#methods-setparameter), [`setParameters`](#methods-setparameters) methods instead.
+Please Note: parameters provided via this method will be available only in the scope of the specified hook point, to specify global parameters use [`setParameter`](#setparameter), [`setParameters`](#setparameters) methods instead.
 
-<a name="methods-first"></a>
+<a name="first"></a>
 #### first
 ```php
-$hooks->first(string $hookName, ?array $parameters): self
+$hooks->first(string $hookName, array|object|null $parameters): self
 ```
-Similar to [`all`](#methods-all) method in every aspect with the exception that only the first callback (after sorting) will be executed.
+Similar to [`all`](#all) method in every aspect with the exception that only the first callback (after sorting) will be executed.
 
-<a name="methods-last"></a>
+<a name="last"></a>
 #### last
 ```php
-$hooks->last(string $hookName, ?array $parameters): self
+$hooks->last(string $hookName, array|object|null $parameters): self
 ```
-Similar to [`all`](#methods-all) method in every aspect with the exception that only the last callback (after sorting) will be executed.
+Similar to [`all`](#all) method in every aspect with the exception that only the last callback (after sorting) will be executed.
 
-<a name="methods-toarray"></a>
+<a name="toarray"></a>
 #### toArray
 ```php
 $hooks->toArray(): array
 ```
 Will return output of the last executed hook name functions as an array.
 
-<a name="methods-tostring"></a>
+<a name="tostring"></a>
 #### toString
 ```php
 $hooks->toString(?string $separator): string
@@ -199,7 +207,7 @@ $hooks->toString(?string $separator): string
 Will return output of the last executed hook name functions as one string.
 + `$separator` could be used to separate the output as you need (e.g: "\n", "&lt;br&gt;"). 
 
-<a name="methods-setparameter"></a>
+<a name="setparameter"></a>
 #### setParameter
 ```php
 $hooks->setParameter(string $name, mixed $value): self
@@ -210,12 +218,53 @@ Use this method to define a parameter that will be accessible from any hook func
 
 P.S: if the parameter already defined then its old value will be replaced by the value provided here.
 
-<a name="methods-setparameters"></a>
+<a name="setparameters"></a>
 #### setParameters
 ```php
 $hooks->setParameters(array $parameters): self
 ```
-Same as [`setParameter`](#methods-setparameter) but here it accepts a name, value pair array as its only argument.
+Same as [`setParameter`](#setparameter) but here it accepts a name, value pair array as its only argument.
+
+<a name="setSourceFile"></a>
+#### setSourceFile
+```php
+$hooks->setSourceFile(?string $path): self
+```
+Used in conjunction with the [`debug`](#debug) method.
+
+<a name="debug"></a>
+#### debug
+```php
+$hooks->debug(callable|null $callback): self
+```
+To enable the debug feature you need to call this method by providing a callback function, this function should accept a single argument that will be the debug info/message.
+
+```php
+$hooks->debug(function($message){
+    // Will print debug message(s)
+    echo $message . PHP_EOL;
+});
+
+$hooks->setSourceFile("/path/to/file/filename.php");
+
+$hooks->register("Greetings", "FooBar::log");
+
+$hooks->all("Greetings");
+```
+
+will output
+
+```text
++ Added Source File: /path/to/file/filename.php
++ Hook Point: Greetings, New Callback Defined:
+        -- Source: /path/to/file/filename.php
+        -- Callback: FooBar::log
+        -- Priority: 1
++ Hook Point: Greetings, Callback Functions Sorted!
++ Hook Point: Greetings, Output Generated For All Callback Functions!
+
+```
+
 
 <a name="testing"></a>
 ## Testing
@@ -233,11 +282,6 @@ Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed re
 ## Contributing
 
 Please see [CONTRIBUTING](.github/CONTRIBUTING.md) for details.
-
-<a name="security"></a>
-## Security Vulnerabilities
-
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
 
 <a name="credits"></a>
 ## Credits
