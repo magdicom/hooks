@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Magdicom;
 
-
 class Hooks
 {
     /**
@@ -368,35 +367,41 @@ class Hooks
      */
     private function log(string $type, mixed ...$data): self
     {
-        if (!$this->debug){
+        if (! $this->debug) {
             return $this;
         }
 
         $message = "";
 
-        switch ($type){
+        switch ($type) {
             case "SourceFile":
                 $message = "+ Added Source File: " . $this->getSourceFile();
+
                 break;
             case "Register":
                 $message = join(PHP_EOL, [
                     "+ Hook Point: " . $data[0] . ", New Callback Defined:",
                     "\t-- Source: " . $this->getSourceFile(),
                     "\t-- Callback: " . $this->getCallbackInfo($data[1]),
-                    "\t-- Priority: " . $data[2]
+                    "\t-- Priority: " . $data[2],
                 ]);
+
                 break;
             case "Sort":
                 $message = "+ Hook Point: " . $data[0] . ", Callback Functions Sorted!";
+
                 break;
             case "Output-All":
                 $message = "+ Hook Point: " . $data[0] . ", Output Generated For All Callback Functions!";
+
                 break;
             case "Output-First":
                 $message = "+ Hook Point: " . $data[0] . ", Output Generated For The First Callback Function!";
+
                 break;
             case "Output-Last":
                 $message = "+ Hook Point: " . $data[0] . ", Output Generated For The Last Callback Function!";
+
                 break;
         }
 
@@ -416,10 +421,11 @@ class Hooks
             if (is_object($callback[0])) {
                 return (new \ReflectionClass($callback[0]))->getName() . "::" . $callback[1];
             }
+
             return $callback[0] . "::" . $callback[1];
         }
 
-        if (is_string($callback)){
+        if (is_string($callback)) {
             return $callback;
         }
 
