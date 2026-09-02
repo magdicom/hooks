@@ -6,12 +6,11 @@ $hooks = new Hooks();
 
 $hooks->register("Callback", function ($vars) {
     return "Closure";
-}, 1);
-
-$hooks->register("Callback", "simple_function_name", 2);
-$hooks->register("Callback", [FooBar::class, 'isStatic'], 3);
-$hooks->register("Callback", [FooBar::class, 'objectBased'], 4);
-$hooks->register("Callback", [(new FooBar()), 'objectBased'], 5);
+}, 1)
+    ->register("Callback", "simple_function_name", 2)
+    ->register("Callback", [FooBar::class, 'isStatic'], 3)
+    ->register("Callback", [FooBar::class, 'objectBased'], 4)
+    ->register("Callback", [(new FooBar()), 'objectBased'], 5);
 
 
 class FooBar

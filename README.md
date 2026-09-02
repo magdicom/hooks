@@ -1,294 +1,270 @@
-# PHP Action Hooks
+# PHP Hooks
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/magdicom/hooks.svg?style=flat-square)](https://packagist.org/packages/magdicom/hooks)
 [![Tests](https://github.com/magdicom/hooks/actions/workflows/run-tests.yml/badge.svg?branch=main)](https://github.com/magdicom/hooks/actions/workflows/run-tests.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/magdicom/hooks.svg?style=flat-square)](https://packagist.org/packages/magdicom/hooks)
 
-Inspired by WordPress, action hooks are functions that you define to be triggered in specific places of your code, it helps you maintain an organized code by slicing giant code blocks into separated files and/or classes. 
+`magdicom/hooks` is a lightweight, framework-independent hook system for PHP.
 
-<a name="installation"></a>
+The upcoming `2.0` line separates hook execution into three explicit models:
+
+- actions for side effects
+- filters for sequential value transformation
+- collectors for independent result gathering
+
+The legacy `register()` / `all()` API remains available as a deprecated compatibility layer for existing integrations.
+
 ## Installation
 
-You can install the package via composer:
+This package currently targets PHP `8.2` or newer.
 
 ```bash
 composer require magdicom/hooks
 ```
 
-<a name="usage"></a>
-## Usage
+## Quick Start
 
-<a name="quick-start"></a>
-### Quick Start
+### Actions
+
+```php
+use Magdicom\Hooks;
+
+$hooks = new Hooks();
+$events = [];
+
+$hooks->addAction('boot', function (array $vars) use (&$events): void {
+    $events[] = 'prepare:' . $vars['name'];
+}, 10);
+
+$hooks->addAction('boot', function (array $vars) use (&$events): void {
+    $events[] = 'finish:' . $vars['name'];
+}, 20);
+
+$hooks->doAction('boot', ['name' => 'hooks']);
+
+var_dump($events);
+```
+
+### Filters
+
+```php
+use Magdicom\Hooks;
+
+$hooks = new Hooks(['suffix' => '!']);
+
+$hooks->addFilter('title', fn (string $value): string => trim($value), 10);
+$hooks->addFilter('title', fn (string $value, array $vars): string => $value . $vars['suffix'], 20);
+$hooks->addFilter('title', fn (string $value): string => strtoupper($value), 30);
+
+echo $hooks->applyFilters('title', ' hello ');
+```
+
+### Collectors
+
 ```php
 use Magdicom\Hooks;
 
 $hooks = new Hooks();
 
-# Register our functions
-$hooks->register("Greetings", function($vars){
-    return "Hi There,";
-}, 1);
+$hooks->addCollector('report', fn (): array => ['id' => 1], 10);
+$hooks->addCollector('report', fn (): array => ['id' => 2], 20);
+$hooks->addCollector('report', fn (): string => 'done', 30);
 
-$hooks->register("Greetings", function($vars){
-    return "This is the second line of greetings!";
-}, 2);
-
-# Later we run it
-echo $hooks->all("Greetings")->toString("<br>");
-```
-The above example will output
-```text
-Hi There,
-This is the second line of greetings!
+var_dump($hooks->collect('report'));
 ```
 
-<a name="output"></a>
-### Output
-When you call any of [`all`](#all), [`first`](#first) or [`last`](#last) methods, the corresponding hook functions will be executed and their output will be saved in a special property to be exported later using [`toString`](#tostring) or [`toArray`](#toarray) methods.
+## Execution Model
 
-<a name="callbacks"></a>
-### Callbacks
+### Actions
 
-<a name="callbacks-closure"></a>
-#### Closure
-```php
-$hooks->register("Callback", function($vars) {
-    return "Closure";
-});
-```
+- Register with `addAction()`
+- Execute with `doAction()`
+- Callback return values are ignored
 
-<a name="callbacks-function-name"></a>
-#### Function Name
-```php
-function simple_function_name($vars){
-    //
-}
+### Filters
 
-$hooks->register("Callback", "simple_function_name");
-```
+- Register with `addFilter()`
+- Execute with `applyFilters()`
+- Each callback receives the current value and must return the next value
 
-<a name="callbacks-object-method"></a>
-#### Object Method
-```php
-class FooBar {
-    public function methodName($vars){
-        //
-    }
-}
+### Collectors
 
-$object = new FooBar;
+- Register with `addCollector()`
+- Execute with `collect()`
+- Each callback runs independently and its raw return value is collected without implicit flattening
 
-$hooks->register("Callback", [$object, 'methodName']);
-```
-or
-```php
-$hooks->register("Callback", [(new FooBar), 'methodName']);
-```
+## Registration and Removal
 
-<a name="callbacks-static-method"></a>
-#### Static Method
-```php
-class FooBar {
-    public static function staticMethodName($vars){
-        //
-    }
-}
-
-$hooks->register("Callback", ['FooBar', 'staticMethodName']);
-```
-in case this is not a static method, an object will be created and the provided method will be called.
-
-<a name="parameters"></a>
-### Parameters
-
-With each of hook callback functions execution an array of parameters could be passed to it to help it perform the required action.
-
-#### Global Parameters
-
-Global parameters could be defined using [`setParameter`](#setparameter) and [`setParameters`](#setparameters) methods and these parameters will be available across all hook points and callbacks.
-
-#### Scoped parameters
-
-The opposite of global parameters, the scoped parameters only available for the specified action hook point, and could be provided as the second argument of [`all`](#all), [`first`](#first) and [`last`](#last) methods.
-
-When you provide it as an array, the values of scoped parameters will temporarily replace (similar key entries) global parameters and passed to the [`register`](#register) methods' callback as a merged array.
-
-When the parameter provided as a class object it will be accessible from the [`register`](#register) method as the first argument, and the global parameters will be accessible via the second argument.
+All registration APIs return a `RegistrationHandle`.
 
 ```php
-class FooBarBaz {
-    public $id;
-
-    public function __construct(int $id){
-        $this->id = $id;
-    }
-}
+use Magdicom\Hooks;
 
 $hooks = new Hooks();
 
-$hooks->setParameters([
-    "name" => "Bar",
-]);
+$handle = $hooks->addAction('boot', fn (): null => null, 10);
 
-$hooks->register("ParameterAsObject", function ($fooBarBaz, $params) {
-    return [$fooBarBaz->id, $params['name']];
+var_dump($hooks->has('boot'));
+var_dump($hooks->has('boot', $handle));
+var_dump($hooks->count('boot'));
+var_dump($hooks->listeners('boot'));
+
+$handle->remove();
+```
+
+Available inspection and removal methods:
+
+- `has(string $hookName, RegistrationHandle|array|callable|null $listener = null): bool`
+- `count(?string $hookName = null): int`
+- `listeners(string $hookName): array`
+- `remove(string $hookName, RegistrationHandle|array|callable $listener): bool`
+- `removeAll(?string $hookName = null): int`
+
+## Ordering and Dispatch Safety
+
+- Lower numeric priorities run before higher numeric priorities.
+- When priorities are equal, listeners keep their registration order.
+- Listener additions or removals during dispatch affect the next invocation, not the current one.
+- Nested and recursive executions are isolated from each other.
+- Execution state is restored even if a callback throws.
+
+## Parameters
+
+Global parameters can be set with `setParameter()` or `setParameters()`. They are available to all hook executions.
+
+Scoped parameters can be passed at invocation time:
+
+- If the scoped value is an array, it is merged with global parameters.
+- If the scoped value is an object, the object is passed first and global parameters are passed separately.
+
+### Array Parameters
+
+```php
+use Magdicom\Hooks;
+
+$hooks = new Hooks(['prefix' => 'Hello']);
+
+$hooks->addAction('greet', function (array $vars): void {
+    echo $vars['prefix'] . ' ' . $vars['name'];
 });
 
-echo $hooks->all("ParameterAsObject", (new FooBarBaz(100))->toString("\n");
-
-// Output will be
-100
-Bar
+$hooks->doAction('greet', ['name' => 'world']);
 ```
 
-<a name="priority"></a>
-### Priority
-When you need to ensure that certain hook functions should be executed in sequence order, here it comes `$priority` which is the 3rd and last argument of [`register`](#register) method.
+### Object Parameters
 
-<a name="methods"></a>
-### Methods
-
-<a name="construct"></a>
-#### __construct
 ```php
-$hooks = new Hooks(?array $parameters);
+use Magdicom\Hooks;
+
+class GreetingContext
+{
+    public function __construct(public int $id)
+    {
+    }
+}
+
+$hooks = new Hooks(['name' => 'Bar']);
+
+$hooks->register('legacy-object', function (GreetingContext $context, array $globals): array {
+    return [$context->id, $globals['name']];
+});
+
+var_dump($hooks->all('legacy-object', new GreetingContext(100))->toArray());
 ```
-The class constructor method will optionally accept a name, value pair array.
 
-<a name="register"></a>
-#### register
+For filters with object parameters, the current value is still passed first, the object is second, and global parameters are third.
+
+## Callback Forms
+
+The registration APIs accept any callback shape supported by the current implementation:
+
+- closures
+- function names
+- object method arrays such as `[$object, 'methodName']`
+- class method arrays such as `['ClassName', 'methodName']`
+
+If a class name and non-static method are provided, the class is instantiated and the method is called on that instance.
+
+## Legacy Compatibility Layer
+
+The following methods remain available for legacy callers and are deprecated for new code:
+
+- `register()`
+- `all()`
+- `first()`
+- `last()`
+- `toArray()`
+- `toString()`
+- `__toString()`
+
+Legacy behavior notes:
+
+- `all()`, `first()`, and `last()` populate a legacy result object for later `toArray()` / `toString()` access.
+- The legacy result is isolated per invocation and safe for nested execution.
+- Running actions, filters, or collectors does not populate the legacy output buffer.
+
+### Legacy Example
+
 ```php
-$hooks->register(string $hookName, array|callable $callback, ?int $priority): self
+use Magdicom\Hooks;
+
+$hooks = new Hooks();
+
+$hooks->register('legacy-greeting', fn (): string => 'Hello', 10)
+    ->register('legacy-greeting', fn (): string => 'World', 20);
+
+echo $hooks->all('legacy-greeting')->toString(' ');
 ```
-Register all your hook functions via this method:
 
-+ `$hookName` this can be anything you want, its like a group name where all other related action hook functions will be attached to.
-+ `$callback` only accepts [callable](https://www.php.net/manual/en/language.types.callable.php) functions.
-+ `$priority` (optional) used to sort callbacks before being executed. 
+## Debugging
 
-<a name="all"></a>
-#### all
-```php
-$hooks->all(string $hookName, array|object|null $parameters): self
-```
-Will execute all callback functions of the specified hook name, by default it will return the output as string, check [output](#output) section for more options.
-+ `$hookName` the hook name you want to execute its callback functions.
-+ `$parameters` optional key, value pair array (or object) that you want to provide for all callback functions related to the same hook point.
-
-Please Note: parameters provided via this method will be available only in the scope of the specified hook point, to specify global parameters use [`setParameter`](#setparameter), [`setParameters`](#setparameters) methods instead.
-
-<a name="first"></a>
-#### first
-```php
-$hooks->first(string $hookName, array|object|null $parameters): self
-```
-Similar to [`all`](#all) method in every aspect with the exception that only the first callback (after sorting) will be executed.
-
-<a name="last"></a>
-#### last
-```php
-$hooks->last(string $hookName, array|object|null $parameters): self
-```
-Similar to [`all`](#all) method in every aspect with the exception that only the last callback (after sorting) will be executed.
-
-<a name="toarray"></a>
-#### toArray
-```php
-$hooks->toArray(): array
-```
-Will return output of the last executed hook name functions as an array.
-
-<a name="tostring"></a>
-#### toString
-```php
-$hooks->toString(?string $separator): string
-```
-Will return output of the last executed hook name functions as one string.
-+ `$separator` could be used to separate the output as you need (e.g: "\n", "&lt;br&gt;"). 
-
-<a name="setparameter"></a>
-#### setParameter
-```php
-$hooks->setParameter(string $name, mixed $value): self
-```
-Use this method to define a parameter that will be accessible from any hook function.
-+ `$name` name of the parameter.
-+ `$value` value of the parameter could be string, array or even an object.
-
-P.S: if the parameter already defined then its old value will be replaced by the value provided here.
-
-<a name="setparameters"></a>
-#### setParameters
-```php
-$hooks->setParameters(array $parameters): self
-```
-Same as [`setParameter`](#setparameter) but here it accepts a name, value pair array as its only argument.
-
-<a name="setSourceFile"></a>
-#### setSourceFile
-```php
-$hooks->setSourceFile(?string $path): self
-```
-Used in conjunction with the [`debug`](#debug) method.
-
-<a name="debug"></a>
-#### debug
-```php
-$hooks->debug(callable|null $callback): self
-```
-To enable the debug feature you need to call this method by providing a callback function, this function should accept a single argument that will be the debug info/message.
+`debug()` and `setSourceFile()` remain available.
 
 ```php
-$hooks->debug(function($message){
-    // Will print debug message(s)
+use Magdicom\Hooks;
+
+$hooks = new Hooks();
+
+$hooks->debug(function (string $message): void {
     echo $message . PHP_EOL;
 });
 
-$hooks->setSourceFile("/path/to/file/filename.php");
-
-$hooks->register("Greetings", "FooBar::log");
-
-$hooks->all("Greetings");
+$hooks->setSourceFile('/path/to/file.php');
+$hooks->register('greeting', 'FooBar::log');
+$hooks->all('greeting');
 ```
 
-will output
+## Deferred to the Renderer Milestone
 
-```text
-+ Added Source File: /path/to/file/filename.php
-+ Hook Point: Greetings, New Callback Defined:
-        -- Source: /path/to/file/filename.php
-        -- Callback: FooBar::log
-        -- Priority: 1
-+ Hook Point: Greetings, Callback Functions Sorted!
-+ Hook Point: Greetings, Output Generated For All Callback Functions!
+This milestone only establishes the execution foundation.
 
-```
+The following topics are intentionally postponed:
 
+- renderers
+- result processors
+- formatting pipelines on top of collector output
+- framework-specific integrations, including Laravel container features, facades, Artisan commands, and Blade helpers
 
-<a name="testing"></a>
 ## Testing
 
 ```bash
 composer test
+composer analyse
+composer format
 ```
 
-<a name="changelog"></a>
 ## Changelog
 
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+See [CHANGELOG.md](CHANGELOG.md).
 
-<a name="contributing"></a>
 ## Contributing
 
-Please see [CONTRIBUTING](.github/CONTRIBUTING.md) for details.
+See [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
-<a name="credits"></a>
 ## Credits
 
 - [Mohamed Magdi](https://github.com/magdicom)
 
-<a name="license"></a>
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+The MIT License (MIT). See [LICENSE.md](LICENSE.md).
