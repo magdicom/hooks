@@ -7,40 +7,40 @@ test('actions execute in order and ignore callback return values', function () {
     $hooks = new Hooks();
     $events = [];
 
-    $hooks->addAction('ActionHook', function (array $vars) use (&$events) {
-        $events[] = 'first:' . $vars['name'];
+    $hooks->addAction('ActionHook', function (string $name) use (&$events) {
+        $events[] = 'first:' . $name;
 
         return 'ignored';
     }, 10);
 
-    $hooks->addAction('ActionHook', function (array $vars) use (&$events) {
-        $events[] = 'second:' . $vars['name'];
+    $hooks->addAction('ActionHook', function (string $name) use (&$events) {
+        $events[] = 'second:' . $name;
 
         return ['ignored' => true];
     }, 20);
 
-    expect($hooks->doAction('ActionHook', ['name' => 'hooks']))->toBe($hooks)
-        ->and($events)->toBe(['first:hooks', 'second:hooks'])
-        ->and($hooks->toArray())->toBe([]);
+    $hooks->doAction('ActionHook', 'hooks');
+
+    expect($events)->toBe(['first:hooks', 'second:hooks']);
 });
 
 test('filters apply sequential transformations', function () {
-    $hooks = new Hooks(['suffix' => '!']);
+    $hooks = new Hooks();
 
-    $hooks->addFilter('Title', fn (string $value, array $vars): string => trim($value) . $vars['suffix'], 10);
+    $hooks->addFilter('Title', fn (string $value, string $suffix): string => trim($value) . $suffix, 10);
     $hooks->addFilter('Title', fn (string $value): string => strtoupper($value), 20);
 
-    expect($hooks->applyFilters('Title', ' hello '))->toBe('HELLO!');
+    expect($hooks->applyFilters('Title', ' hello ', '!'))->toBe('HELLO!');
 });
 
-test('filters support object scoped parameters with globals as third argument', function () {
-    $hooks = new Hooks(['suffix' => '!']);
+test('filters support typed context objects through variadic arguments', function () {
+    $hooks = new Hooks();
 
-    $hooks->addFilter('ObjectFilter', function (string $value, FilterContext $context, array $globals): string {
-        return $value . ':' . $context->name . $globals['suffix'];
+    $hooks->addFilter('ObjectFilter', function (string $value, FilterContext $context, string $suffix): string {
+        return $value . ':' . $context->name . $suffix;
     });
 
-    expect($hooks->applyFilters('ObjectFilter', 'hello', new FilterContext('world')))->toBe('hello:world!');
+    expect($hooks->applyFilters('ObjectFilter', 'hello', new FilterContext('world'), '!'))->toBe('hello:world!');
 });
 
 test('collectors return raw callback results without flattening', function () {
@@ -54,7 +54,7 @@ test('collectors return raw callback results without flattening', function () {
         ['id' => 1],
         [['id' => 2]],
         'done',
-    ])->and($hooks->toArray())->toBe([]);
+    ]);
 });
 
 test('inspection and removal APIs include action filter and collector registrations', function () {
@@ -62,17 +62,25 @@ test('inspection and removal APIs include action filter and collector registrati
     $filterCallback = fn (string $value): string => $value . ' filtered';
 
     $action = $hooks->addAction('Shared', fn (): null => null, 5);
-    $hooks->addFilter('Shared', $filterCallback, 10);
+    $filter = $hooks->addFilter('Shared', $filterCallback, 10);
     $collector = $hooks->addCollector('Shared', fn (): string => 'collected', 15);
 
     $listeners = $hooks->listeners('Shared');
 
     expect($hooks->count('Shared'))->toBe(3)
-        ->and($hooks->has('Shared', $action))->toBeTrue()
-        ->and($hooks->has('Shared', $filterCallback))->toBeTrue()
+        ->and($hooks->has('Shared'))->toBeTrue()
+        ->and($hooks->hasAction('Shared', $action))->toBeTrue()
+        ->and($hooks->hasFilter('Shared', $filterCallback))->toBeTrue()
+        ->and($hooks->hasCollector('Shared', $collector))->toBeTrue()
+        ->and(array_map(fn (RegistrationHandle $handle): int => $handle->id(), $hooks->actions('Shared')))
+        ->toBe([$action->id()])
+        ->and(array_map(fn (RegistrationHandle $handle): int => $handle->id(), $hooks->filters('Shared')))
+        ->toBe([$filter->id()])
+        ->and(array_map(fn (RegistrationHandle $handle): int => $handle->id(), $hooks->collectors('Shared')))
+        ->toBe([$collector->id()])
         ->and(array_map(fn (RegistrationHandle $handle): string => $handle->type(), $listeners))
         ->toBe(['action', 'filter', 'collector'])
-        ->and($hooks->remove('Shared', $collector))->toBeTrue()
+        ->and($hooks->removeCollector('Shared', $collector))->toBeTrue()
         ->and($hooks->count('Shared'))->toBe(2);
 });
 

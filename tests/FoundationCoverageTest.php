@@ -2,13 +2,9 @@
 
 use Magdicom\Hooks;
 
-test('priority ordering is applied consistently across legacy action filter and collector hooks', function () {
+test('priority ordering is applied consistently across action filter and collector hooks', function () {
     $hooks = new Hooks();
     $actionEvents = [];
-
-    $hooks->register('PriorityLegacy', fn (): string => 'second', 20)
-        ->register('PriorityLegacy', fn (): string => 'first', 10)
-        ->register('PriorityLegacy', fn (): string => 'third', 30);
 
     $hooks->addAction('PriorityAction', function () use (&$actionEvents): void {
         $actionEvents[] = 'second';
@@ -28,9 +24,9 @@ test('priority ordering is applied consistently across legacy action filter and 
     $hooks->addCollector('PriorityCollector', fn (): string => 'first', 10);
     $hooks->addCollector('PriorityCollector', fn (): string => 'third', 30);
 
-    expect($hooks->all('PriorityLegacy')->toArray())->toBe(['first', 'second', 'third'])
-        ->and($hooks->doAction('PriorityAction'))->toBe($hooks)
-        ->and($actionEvents)->toBe(['first', 'second', 'third'])
+    $hooks->doAction('PriorityAction');
+
+    expect($actionEvents)->toBe(['first', 'second', 'third'])
         ->and($hooks->applyFilters('PriorityFilter', 'start'))->toBe('start-first-second-third')
         ->and($hooks->collect('PriorityCollector'))->toBe(['first', 'second', 'third']);
 });
@@ -39,19 +35,19 @@ test('repeated invocations of the new apis remain independent', function () {
     $hooks = new Hooks();
     $actionEvents = [];
 
-    $hooks->addAction('RepeatAction', function (array $vars) use (&$actionEvents): void {
-        $actionEvents[] = $vars['value'];
+    $hooks->addAction('RepeatAction', function (string $value) use (&$actionEvents): void {
+        $actionEvents[] = $value;
     });
 
-    $hooks->addFilter('RepeatFilter', fn (string $value, array $vars): string => $value . '-' . $vars['suffix']);
-    $hooks->addCollector('RepeatCollector', fn (array $vars): array => ['value' => $vars['value']]);
+    $hooks->addFilter('RepeatFilter', fn (string $value, string $suffix): string => $value . '-' . $suffix);
+    $hooks->addCollector('RepeatCollector', fn (string $value): array => ['value' => $value]);
 
-    expect($hooks->doAction('RepeatAction', ['value' => 'first']))->toBe($hooks)
-        ->and($hooks->doAction('RepeatAction', ['value' => 'second']))->toBe($hooks)
-        ->and($actionEvents)->toBe(['first', 'second'])
-        ->and($hooks->applyFilters('RepeatFilter', 'start', ['suffix' => 'one']))->toBe('start-one')
-        ->and($hooks->applyFilters('RepeatFilter', 'start', ['suffix' => 'two']))->toBe('start-two')
-        ->and($hooks->collect('RepeatCollector', ['value' => 'alpha']))->toBe([['value' => 'alpha']])
-        ->and($hooks->collect('RepeatCollector', ['value' => 'beta']))->toBe([['value' => 'beta']])
-        ->and($hooks->toArray())->toBe([]);
+    $hooks->doAction('RepeatAction', 'first');
+    $hooks->doAction('RepeatAction', 'second');
+
+    expect($actionEvents)->toBe(['first', 'second'])
+        ->and($hooks->applyFilters('RepeatFilter', 'start', 'one'))->toBe('start-one')
+        ->and($hooks->applyFilters('RepeatFilter', 'start', 'two'))->toBe('start-two')
+        ->and($hooks->collect('RepeatCollector', 'alpha'))->toBe([['value' => 'alpha']])
+        ->and($hooks->collect('RepeatCollector', 'beta'))->toBe([['value' => 'beta']]);
 });

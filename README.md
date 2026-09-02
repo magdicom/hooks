@@ -6,13 +6,13 @@
 
 `magdicom/hooks` is a lightweight, framework-independent hook system for PHP.
 
-The upcoming `2.0` line separates hook execution into three explicit models:
+Version `2.0` is an intentionally breaking release. If you are upgrading from `1.x`, read [UPGRADE.md](UPGRADE.md) before migrating code.
+
+The `2.0` branch currently exposes three explicit hook models:
 
 - actions for side effects
 - filters for sequential value transformation
-- collectors for independent result gathering
-
-The legacy `register()` / `all()` API remains available as a deprecated compatibility layer for existing integrations.
+- collectors for raw result gathering
 
 ## Installation
 
@@ -32,15 +32,15 @@ use Magdicom\Hooks;
 $hooks = new Hooks();
 $events = [];
 
-$hooks->addAction('boot', function (array $vars) use (&$events): void {
-    $events[] = 'prepare:' . $vars['name'];
+$hooks->addAction('boot', function (string $name) use (&$events): void {
+    $events[] = 'prepare:' . $name;
 }, 10);
 
-$hooks->addAction('boot', function (array $vars) use (&$events): void {
-    $events[] = 'finish:' . $vars['name'];
+$hooks->addAction('boot', function (string $name) use (&$events): void {
+    $events[] = 'finish:' . $name;
 }, 20);
 
-$hooks->doAction('boot', ['name' => 'hooks']);
+$hooks->doAction('boot', 'hooks');
 
 var_dump($events);
 ```
@@ -50,13 +50,13 @@ var_dump($events);
 ```php
 use Magdicom\Hooks;
 
-$hooks = new Hooks(['suffix' => '!']);
+$hooks = new Hooks();
 
 $hooks->addFilter('title', fn (string $value): string => trim($value), 10);
-$hooks->addFilter('title', fn (string $value, array $vars): string => $value . $vars['suffix'], 20);
+$hooks->addFilter('title', fn (string $value, string $suffix): string => $value . $suffix, 20);
 $hooks->addFilter('title', fn (string $value): string => strtoupper($value), 30);
 
-echo $hooks->applyFilters('title', ' hello ');
+echo $hooks->applyFilters('title', ' hello ', '!');
 ```
 
 ### Collectors
@@ -73,29 +73,10 @@ $hooks->addCollector('report', fn (): string => 'done', 30);
 var_dump($hooks->collect('report'));
 ```
 
-## Execution Model
-
-### Actions
-
-- Register with `addAction()`
-- Execute with `doAction()`
-- Callback return values are ignored
-
-### Filters
-
-- Register with `addFilter()`
-- Execute with `applyFilters()`
-- Each callback receives the current value and must return the next value
-
-### Collectors
-
-- Register with `addCollector()`
-- Execute with `collect()`
-- Each callback runs independently and its raw return value is collected without implicit flattening
-
 ## Registration and Removal
 
 All registration APIs return a `RegistrationHandle`.
+If no priority is provided, the default is `10`.
 
 ```php
 use Magdicom\Hooks;
@@ -105,53 +86,69 @@ $hooks = new Hooks();
 $handle = $hooks->addAction('boot', fn (): null => null, 10);
 
 var_dump($hooks->has('boot'));
-var_dump($hooks->has('boot', $handle));
+var_dump($hooks->hasAction('boot', $handle));
 var_dump($hooks->count('boot'));
 var_dump($hooks->listeners('boot'));
+var_dump($hooks->actions('boot'));
 
 $handle->remove();
 ```
 
 Available inspection and removal methods:
 
-- `has(string $hookName, RegistrationHandle|array|callable|null $listener = null): bool`
+- `has(string $hookName): bool`
+- `hasAction(string $hookName, RegistrationHandle|array|callable|null $listener = null): bool`
+- `hasFilter(string $hookName, RegistrationHandle|array|callable|null $listener = null): bool`
+- `hasCollector(string $hookName, RegistrationHandle|array|callable|null $listener = null): bool`
 - `count(?string $hookName = null): int`
 - `listeners(string $hookName): array`
-- `remove(string $hookName, RegistrationHandle|array|callable $listener): bool`
+- `actions(string $hookName): array`
+- `filters(string $hookName): array`
+- `collectors(string $hookName): array`
+- `removeAction(string $hookName, RegistrationHandle|array|callable $listener): bool`
+- `removeFilter(string $hookName, RegistrationHandle|array|callable $listener): bool`
+- `removeCollector(string $hookName, RegistrationHandle|array|callable $listener): bool`
 - `removeAll(?string $hookName = null): int`
+- `removeAllActions(?string $hookName = null): int`
+- `removeAllFilters(?string $hookName = null): int`
+- `removeAllCollectors(?string $hookName = null): int`
 
 ## Ordering and Dispatch Safety
 
 - Lower numeric priorities run before higher numeric priorities.
+- The default listener priority is `10`.
 - When priorities are equal, listeners keep their registration order.
 - Listener additions or removals during dispatch affect the next invocation, not the current one.
 - Nested and recursive executions are isolated from each other.
-- Execution state is restored even if a callback throws.
+- Exceptions bubble to the caller without corrupting later invocations.
 
-## Parameters
+## Invocation Arguments
 
-Global parameters can be set with `setParameter()` or `setParameters()`. They are available to all hook executions.
+Invocation uses natural variadic arguments:
 
-Scoped parameters can be passed at invocation time:
+- `doAction(string $hookName, mixed ...$arguments): void`
+- `applyFilters(string $hookName, mixed $value, mixed ...$arguments): mixed`
+- `collect(string $hookName, mixed ...$arguments): array`
 
-- If the scoped value is an array, it is merged with global parameters.
-- If the scoped value is an object, the object is passed first and global parameters are passed separately.
+Action and collector callbacks receive `...$arguments` exactly as passed.
 
-### Array Parameters
+Filter callbacks receive the current filtered value first, followed by `...$arguments`.
+
+### Scalar Arguments
 
 ```php
 use Magdicom\Hooks;
 
-$hooks = new Hooks(['prefix' => 'Hello']);
+$hooks = new Hooks();
 
-$hooks->addAction('greet', function (array $vars): void {
-    echo $vars['prefix'] . ' ' . $vars['name'];
+$hooks->addAction('greet', function (string $prefix, string $name): void {
+    echo $prefix . ' ' . $name;
 });
 
-$hooks->doAction('greet', ['name' => 'world']);
+$hooks->doAction('greet', 'Hello', 'world');
 ```
 
-### Object Parameters
+### Typed Context Objects
 
 ```php
 use Magdicom\Hooks;
@@ -163,20 +160,20 @@ class GreetingContext
     }
 }
 
-$hooks = new Hooks(['name' => 'Bar']);
+$hooks = new Hooks();
 
-$hooks->register('legacy-object', function (GreetingContext $context, array $globals): array {
-    return [$context->id, $globals['name']];
+$hooks->addCollector('collector-object', function (GreetingContext $context, string $name): array {
+    return [$context->id, $name];
 });
 
-var_dump($hooks->all('legacy-object', new GreetingContext(100))->toArray());
+var_dump($hooks->collect('collector-object', new GreetingContext(100), 'Bar'));
 ```
 
-For filters with object parameters, the current value is still passed first, the object is second, and global parameters are third.
+When several callbacks need shared state, pass an explicit typed context object rather than relying on a global parameter bag.
 
 ## Callback Forms
 
-The registration APIs accept any callback shape supported by the current implementation:
+The registration APIs accept:
 
 - closures
 - function names
@@ -184,37 +181,6 @@ The registration APIs accept any callback shape supported by the current impleme
 - class method arrays such as `['ClassName', 'methodName']`
 
 If a class name and non-static method are provided, the class is instantiated and the method is called on that instance.
-
-## Legacy Compatibility Layer
-
-The following methods remain available for legacy callers and are deprecated for new code:
-
-- `register()`
-- `all()`
-- `first()`
-- `last()`
-- `toArray()`
-- `toString()`
-- `__toString()`
-
-Legacy behavior notes:
-
-- `all()`, `first()`, and `last()` populate a legacy result object for later `toArray()` / `toString()` access.
-- The legacy result is isolated per invocation and safe for nested execution.
-- Running actions, filters, or collectors does not populate the legacy output buffer.
-
-### Legacy Example
-
-```php
-use Magdicom\Hooks;
-
-$hooks = new Hooks();
-
-$hooks->register('legacy-greeting', fn (): string => 'Hello', 10)
-    ->register('legacy-greeting', fn (): string => 'World', 20);
-
-echo $hooks->all('legacy-greeting')->toString(' ');
-```
 
 ## Debugging
 
@@ -230,20 +196,41 @@ $hooks->debug(function (string $message): void {
 });
 
 $hooks->setSourceFile('/path/to/file.php');
-$hooks->register('greeting', 'FooBar::log');
-$hooks->all('greeting');
+$hooks->addAction('greeting', 'FooBar::log');
+$hooks->doAction('greeting');
 ```
 
-## Deferred to the Renderer Milestone
+## Deferred to Later Milestones
 
-This milestone only establishes the execution foundation.
+The current branch does not yet implement:
 
-The following topics are intentionally postponed:
-
+- processors
 - renderers
-- result processors
-- formatting pipelines on top of collector output
-- framework-specific integrations, including Laravel container features, facades, Artisan commands, and Blade helpers
+- resolvers
+- framework-specific integrations
+
+Until the renderer milestone exists, convert collected string results explicitly in userland, for example with `implode('', $hooks->collect('report'))`.
+
+## Upgrading from 1.x
+
+Version `2.0` removes the legacy `register()` / `all()` dispatch model entirely.
+
+- Side-effect callbacks should move to `addAction()` / `doAction()`.
+- Sequential value transformations should move to `addFilter()` / `applyFilters()`.
+- Output aggregation should move to `addCollector()` / `collect()`.
+- Global parameter arrays should move to explicit invocation arguments or typed context objects.
+- String conversion should use `implode()` temporarily until renderers are added in a later milestone.
+
+Example migration:
+
+```php
+// Version 1
+$hooks->register('menu', $callback)->all('menu')->toArray();
+
+// Version 2
+$hooks->addCollector('menu', $callback);
+$results = $hooks->collect('menu');
+```
 
 ## Testing
 

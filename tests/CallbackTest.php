@@ -4,34 +4,34 @@ use Magdicom\Hooks;
 
 $hooks = new Hooks();
 
-$hooks->register("Callback", function ($vars) {
+$hooks->addCollector("Callback", function () {
     return "Closure";
-}, 1)
-    ->register("Callback", "simple_function_name", 2)
-    ->register("Callback", [FooBar::class, 'isStatic'], 3)
-    ->register("Callback", [FooBar::class, 'objectBased'], 4)
-    ->register("Callback", [(new FooBar()), 'objectBased'], 5);
+}, 1);
+$hooks->addCollector("Callback", "simple_function_name", 2);
+$hooks->addCollector("Callback", [FooBar::class, 'isStatic'], 3);
+$hooks->addCollector("Callback", [FooBar::class, 'objectBased'], 4);
+$hooks->addCollector("Callback", [(new FooBar()), 'objectBased'], 5);
 
 
 class FooBar
 {
-    public function objectBased($vars)
+    public function objectBased()
     {
         return "ObjectMethod";
     }
 
-    public static function isStatic($vars)
+    public static function isStatic()
     {
         return "StaticMethod";
     }
 }
 
-function simple_function_name($vars)
+function simple_function_name()
 {
     return "SimpleFunction";
 }
 
-test('Callback -> toArray', function () use ($hooks) {
-    expect($hooks->all("Callback")->toArray())
+test('collector callbacks support closures functions and method arrays', function () use ($hooks) {
+    expect($hooks->collect("Callback"))
         ->toBe(["Closure", "SimpleFunction", "StaticMethod", "ObjectMethod", "ObjectMethod"]);
 });

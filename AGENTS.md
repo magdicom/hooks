@@ -2,23 +2,30 @@
 
 ## Purpose
 
-This repository contains `magdicom/hooks`, a lightweight PHP action hooks package.
+This repository contains `magdicom/hooks`, a lightweight PHP hook package focused on three framework-independent execution models:
 
-The package is intentionally small. Changes should preserve that property unless there is a clear product-level reason to expand scope.
+- actions
+- filters
+- collectors
+
+The package should stay small, explicit, and free of framework coupling.
 
 ## Repository Layout
 
-- `src/Hooks.php`: the package implementation and the public API surface.
-- `tests/*.php`: Pest test coverage for string output, array output, callbacks, and parameters.
-- `composer.json`: package metadata, autoloading, and local scripts.
-- `README.md`: user-facing behavior and examples. Keep this aligned with shipped behavior.
-- `CHANGELOG.md`: release notes. Update for user-visible changes.
+- `src/Hooks.php`: core runtime and public API surface.
+- `src/RegistrationHandle.php`: registration removal handle.
+- `tests/*.php`: Pest coverage for callbacks, ordering, inspection, and dispatch safety.
+- `composer.json`: package metadata, scripts, and toolchain.
+- `README.md`: user-facing API documentation.
+- `UPGRADE.md`: version-1 to version-2 migration guide.
+- `CHANGELOG.md`: release notes.
 
 ## Tech Stack
 
-- PHP `^8.0`
-- Pest for tests
-- PHP CS Fixer for formatting
+- PHP `^8.2`
+- Pest
+- PHPStan
+- PHP CS Fixer
 
 ## Commands
 
@@ -27,183 +34,110 @@ Run from the repository root.
 ```bash
 composer install
 composer test
-composer test-coverage
+composer analyse
 composer format
 ```
 
-If dependencies are missing, install them before making behavioral changes or running tests.
+## Public API
 
-## Working Rules
-
-### 1. Protect the public API
-
-This package is consumed as a library. Treat all public methods on `Magdicom\Hooks` as part of the supported API unless the user explicitly asks for a breaking change.
-
-Current public methods include:
+Treat these methods on `Magdicom\Hooks` as the supported public surface unless the active 2.0 task explicitly changes them:
 
 - `__construct`
-- `register`
-- `all`
-- `first`
-- `last`
-- `toArray`
-- `toString`
-- `__toString`
-- `setParameter`
-- `setParam`
-- `setParameters`
-- `setParams`
+- `addAction`
+- `doAction`
+- `addFilter`
+- `applyFilters`
+- `addCollector`
+- `collect`
+- `has`
+- `hasAction`
+- `hasFilter`
+- `hasCollector`
+- `count`
+- `listeners`
+- `actions`
+- `filters`
+- `collectors`
+- `removeAction`
+- `removeFilter`
+- `removeCollector`
+- `removeAll`
+- `removeAllActions`
+- `removeAllFilters`
+- `removeAllCollectors`
 - `debug`
 - `setSourceFile`
 - `getSourceFile`
 
-When modifying behavior:
+Treat `Magdicom\RegistrationHandle` as public as well.
 
-- Prefer additive changes over breaking changes.
-- Preserve existing argument order and return types where possible.
-- Keep method chaining intact for fluent methods that currently return `self`.
-- When introducing a replacement API, provide a compatibility path and mark legacy entry points clearly in code and docs.
+## 2.0 Constraints
 
-### 1.1. 2.0 migration constraints
+- Do not reintroduce version-1 compatibility APIs or output buffering.
+- Keep the runtime framework-independent.
+- Preserve deterministic listener ordering.
+- Preserve listener snapshot behavior during dispatch.
+- Preserve nested, recursive, and exception-safe execution.
+- Prefer explicit APIs over generic magic behavior.
 
-For the framework-independent `2.0` milestone, prefer these architectural rules:
+If a change conflicts with these rules, stop and surface the tradeoff.
 
-- eliminate shared mutable execution output
-- use isolated per-invocation result state
-- support nested and recursive dispatch safely
-- make listener mutation during dispatch affect only future invocations
-- preserve legacy APIs through a compatibility layer where reasonable
-- do not add Laravel or container-specific behavior
+## Implementation Guidance
 
-If a proposed change conflicts with these rules, stop and surface the tradeoff explicitly.
-
-### 2. Require tests for behavior changes
-
-Any functional change must include or update Pest tests.
-
-Expected cases:
-
-- happy path behavior
-- ordering and priority behavior
-- callback resolution behavior
-- parameter merging behavior
-- regression coverage for the specific bug or edge case
-
-If a change affects output format or documented examples, update `README.md` in the same change.
-
-### 3. Keep implementation small and explicit
-
-Avoid introducing unnecessary abstraction layers, service containers, traits, or framework-specific dependencies.
-
-Good changes in this repo usually look like:
-
-- small targeted fixes in `src/Hooks.php`
-- small supporting value objects when isolated execution state requires them
-- clear tests proving the behavior
-- documentation updates when the external contract changes
-
-### 4. Favor deterministic behavior
-
-Hook execution order, callback preparation, and output aggregation are core behavior. Any change that could alter ordering or callback invocation semantics needs explicit tests.
-
-Be especially careful around:
-
-- priority sorting
-- equal-priority registration order stability
-- handling callable vs array callback definitions
-- registration handle lifecycle and listener removal semantics
-- object parameter passing
-- array merge semantics in output and parameters
-- repeated execution and output reset behavior
-- restoring execution state when callbacks throw
-
-### 5. Respect backward compatibility in docs and examples
-
-Examples in `README.md` should remain copy-pasteable.
-
-When updating examples:
-
-- use valid PHP syntax
-- keep examples minimal
-- prefer documented behavior that is covered by tests
-
-## Code Style
-
-- Use `declare(strict_types=1);` in PHP source files.
-- Prefer typed properties and typed method signatures.
-- Match the existing namespace layout unless there is a strong reason to restructure.
-- Keep comments sparse and useful.
-- Prefer straightforward control flow over cleverness.
+- Keep changes concentrated in `src/Hooks.php` unless a small support type clearly improves the design.
+- Avoid adding service containers, facades, observers, or framework-specific abstractions.
+- Add comments only when the code would otherwise be genuinely hard to parse.
+- Prefer straightforward control flow over abstraction for its own sake.
 
 ## Testing Expectations
 
+Any behavior change should include Pest coverage for:
+
+- happy path behavior
+- ordering and priority behavior
+- callback resolution
+- dispatch mutation safety
+- nested or exceptional execution when relevant
+
 Before finishing work:
 
-1. Run `composer test` when dependencies are available.
-2. Run `composer format` if PHP files changed.
-3. Run static analysis if the toolchain includes it for the current milestone.
-4. Verify that changed behavior is covered by Pest tests.
-5. Add manual testing instructions when they are practical for the task, especially for user-visible behavior, tooling changes, CI workflow changes, or integration-adjacent changes that automated tests do not fully prove.
+1. Run `composer test`.
+2. Run `composer analyse`.
+3. Run `composer format` if PHP files changed.
+4. Append manual testing instructions to the GitHub project task when they are practical.
 
-If tests cannot be run, state that clearly in the final handoff.
+## Documentation Expectations
 
-## Change Checklist
-
-For behavioral changes:
-
-- update implementation
-- add or update tests
-- update `README.md` if user-facing behavior changed
-- update `CHANGELOG.md` for notable shipped changes
-- document deprecations when legacy APIs are preserved temporarily
-
-For maintenance-only changes:
-
-- avoid unnecessary README churn
-- do not rewrite stable code without a concrete benefit
+- Keep `README.md` aligned with the shipped API.
+- Keep `UPGRADE.md` aligned with the actual migration surface.
+- Update `CHANGELOG.md` for user-visible changes.
+- When breaking APIs intentionally, document the migration path clearly instead of preserving shims.
 
 ## Planning Guidance
 
-When breaking work into tasks for this repository:
+Good task slices in this repo:
 
-- keep each task independently testable
-- separate refactors from behavior changes
-- separate API additions from documentation cleanup
-- prefer vertical slices that end in passing tests
+- `Remove version-1 dispatch APIs from Hooks`
+- `Switch hook invocation to variadic arguments`
+- `Add type-aware action/filter/collector removal APIs`
+- `Document the version-2 migration path`
 
-Good task titles:
+Weak task slices:
 
-- `Fix object callback validation in register()`
-- `Add regression tests for scoped parameter override behavior`
-- `Document debug workflow and source file usage`
-- `Refine output aggregation for keyed array responses`
-- `Introduce isolated invocation results for 2.0 dispatch`
-- `Add stable registration handles and listener inspection APIs`
-
-Weak task titles:
-
-- `Improve codebase`
-- `Refactor hooks`
-- `Cleanup everything`
+- `Refactor everything`
+- `Improve architecture`
+- `Cleanup codebase`
 
 ## What To Avoid
 
-- Introducing framework coupling
-- Making undocumented breaking API changes
-- Changing hook ordering behavior without tests
-- Editing tests to fit incorrect behavior unless the intended contract has changed
-- Large rewrites without a measured reason
+- Reintroducing removed version-1 APIs
+- Framework coupling
+- Ambiguous removal behavior across hook types
+- Changing ordering semantics without tests
+- Large rewrites without a bounded reason
 
-## Definition of Done
+## Board Workflow
 
-A task is done when:
-
-- the code change is implemented
-- relevant tests exist and pass, or inability to run them is explicitly reported
-- manual testing instructions are included when they are reasonably possible and add value
-- docs are updated if the public contract changed
-- the change remains consistent with the package’s lightweight scope
-- deprecations and compatibility notes are explicit when legacy APIs are touched
-
-Completed tasks should be moved to `In review` on the GitHub project board, not directly to `Done`.
-When manual testing instructions are relevant, append them to the GitHub project task info for that item instead of repeating them in the final chat response unless the user explicitly asks for them there.
+- Move fully completed tasks to `In review`.
+- Append manual testing instructions to the GitHub project task info when useful.
+- Do not move tasks directly to `Done` unless explicitly requested.

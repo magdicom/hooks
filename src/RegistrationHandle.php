@@ -44,11 +44,8 @@ class RegistrationHandle
         return ($this->remover)();
     }
 
-    /**
-     * @param array<int, mixed> $arguments
-     */
-    public function __call(string $name, array $arguments): mixed
+    public function belongsTo(Hooks $hooks): bool
     {
-        return $this->hooks->$name(...$arguments);
+        return $this->hooks === $hooks;
     }
 }

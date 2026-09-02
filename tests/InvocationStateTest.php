@@ -2,52 +2,48 @@
 
 use Magdicom\Hooks;
 
-test('repeated invocations keep isolated results', function () {
+test('repeated collector invocations stay independent', function () {
     $hooks = new Hooks();
 
-    $hooks->register('Repeated', fn () => 'Alpha', 1)
-        ->register('Repeated', fn () => 'Beta', 2);
+    $hooks->addCollector('Repeated', fn () => 'Alpha', 1);
+    $hooks->addCollector('Repeated', fn () => 'Beta', 2);
 
-    expect($hooks->all('Repeated')->toArray())->toBe(['Alpha', 'Beta'])
-        ->and($hooks->first('Repeated')->toArray())->toBe(['Alpha'])
-        ->and($hooks->all('Repeated')->toArray())->toBe(['Alpha', 'Beta'])
-        ->and($hooks->last('Repeated')->toArray())->toBe(['Beta']);
+    expect($hooks->collect('Repeated'))->toBe(['Alpha', 'Beta'])
+        ->and($hooks->collect('Repeated'))->toBe(['Alpha', 'Beta']);
 });
 
-test('nested invocations do not corrupt parent results', function () {
+test('nested collector invocations stay isolated', function () {
     $hooks = new Hooks();
 
-    $hooks->register('Inner', fn () => 'NestedA', 1)
-        ->register('Inner', fn () => 'NestedB', 2);
+    $hooks->addCollector('Inner', fn () => 'NestedA', 1);
+    $hooks->addCollector('Inner', fn () => 'NestedB', 2);
 
-    $hooks->register('Outer', fn () => 'OuterA', 1)
-        ->register('Outer', function () use ($hooks) {
-            expect($hooks->all('Inner')->toString(':'))->toBe('NestedA:NestedB');
+    $hooks->addCollector('Outer', fn () => 'OuterA', 1);
+    $hooks->addCollector('Outer', function () use ($hooks) {
+        expect($hooks->collect('Inner'))->toBe(['NestedA', 'NestedB']);
 
-            return 'OuterB';
-        }, 2)
-        ->register('Outer', fn () => 'OuterC', 3);
+        return 'OuterB';
+    }, 2);
+    $hooks->addCollector('Outer', fn () => 'OuterC', 3);
 
-    expect($hooks->all('Outer')->toArray())->toBe(['OuterA', 'OuterB', 'OuterC'])
-        ->and($hooks->toString(':'))->toBe('OuterA:OuterB:OuterC');
+    expect($hooks->collect('Outer'))->toBe(['OuterA', 'OuterB', 'OuterC']);
 });
 
-test('recursive legacy invocations restore the parent result state', function () {
+test('recursive collector invocations stay isolated', function () {
     $hooks = new Hooks();
 
-    $hooks->register('Recursive', function (array $vars) use ($hooks) {
-        $depth = $vars['depth'] ?? 0;
+    $hooks->addCollector('Recursive', function (int $depth) use ($hooks) {
+        $currentDepth = $depth;
 
-        if ($depth < 2) {
-            expect($hooks->all('Recursive', ['depth' => $depth + 1])->toArray())
-                ->toBe(['depth-' . ($depth + 1)]);
+        if ($currentDepth < 2) {
+            expect($hooks->collect('Recursive', $currentDepth + 1))
+                ->toBe(['depth-' . ($currentDepth + 1)]);
         }
 
-        return 'depth-' . $depth;
+        return 'depth-' . $currentDepth;
     });
 
-    expect($hooks->all('Recursive', ['depth' => 0])->toArray())->toBe(['depth-0'])
-        ->and($hooks->toString())->toBe('depth-0');
+    expect($hooks->collect('Recursive', 0))->toBe(['depth-0']);
 });
 
 test('nested action filter and collector dispatches stay isolated', function () {
@@ -70,11 +66,11 @@ test('nested action filter and collector dispatches stay isolated', function () 
     $hooks->addCollector('InnerCollector', fn (): string => 'inner-result');
     $hooks->addCollector('OuterCollector', fn (): array => $hooks->collect('InnerCollector'));
 
-    expect($hooks->doAction('OuterAction'))->toBe($hooks)
-        ->and($events)->toBe(['before', 'inner', 'after'])
+    $hooks->doAction('OuterAction');
+
+    expect($events)->toBe(['before', 'inner', 'after'])
         ->and($hooks->applyFilters('OuterFilter', 'start'))->toBe('start-inner-outer')
-        ->and($hooks->collect('OuterCollector'))->toBe([['inner-result']])
-        ->and($hooks->toArray())->toBe([]);
+        ->and($hooks->collect('OuterCollector'))->toBe([['inner-result']]);
 });
 
 test('recursive filters complete without leaking state across invocations', function () {
@@ -89,6 +85,5 @@ test('recursive filters complete without leaking state across invocations', func
     });
 
     expect($hooks->applyFilters('RecursiveFilter', 0))->toBe(3)
-        ->and($hooks->applyFilters('RecursiveFilter', 2))->toBe(3)
-        ->and($hooks->toArray())->toBe([]);
+        ->and($hooks->applyFilters('RecursiveFilter', 2))->toBe(3);
 });

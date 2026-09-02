@@ -2,36 +2,6 @@
 
 use Magdicom\Hooks;
 
-test('nested legacy exceptions restore parent result state', function () {
-    $hooks = new Hooks();
-
-    $hooks->register('Explode', fn () => 'explode-start', 10)
-        ->register('Explode', function (): void {
-            throw new RuntimeException('boom');
-        }, 20);
-
-    $hooks->register('Outer', fn () => 'outer-start', 10)
-        ->register('Outer', function () use ($hooks) {
-            try {
-                $hooks->all('Explode');
-            } catch (RuntimeException $exception) {
-                expect($exception->getMessage())->toBe('boom');
-            }
-
-            return 'outer-recovered';
-        }, 20)
-        ->register('Outer', fn () => 'outer-end', 30);
-
-    $hooks->register('Safe', fn () => 'safe');
-
-    expect($hooks->all('Outer')->toArray())->toBe([
-        'outer-start',
-        'outer-recovered',
-        'outer-end',
-    ])->and($hooks->toString(':'))->toBe('outer-start:outer-recovered:outer-end')
-        ->and($hooks->all('Safe')->toArray())->toBe(['safe']);
-});
-
 test('failed action filter and collector dispatches leave later invocations usable', function () {
     $hooks = new Hooks();
     $events = [];
@@ -75,10 +45,34 @@ test('failed action filter and collector dispatches leave later invocations usab
     $hooks->addFilter('SafeFilter', fn (string $value): string => $value . '-safe');
     $hooks->addCollector('SafeCollector', fn (): string => 'safe-collector');
 
-    expect($events)->toBe(['before-throw'])
-        ->and($hooks->doAction('SafeAction'))->toBe($hooks)
-        ->and($events)->toBe(['before-throw', 'safe-action'])
+    expect($events)->toBe(['before-throw']);
+
+    $hooks->doAction('SafeAction');
+
+    expect($events)->toBe(['before-throw', 'safe-action'])
         ->and($hooks->applyFilters('SafeFilter', 'value'))->toBe('value-safe')
-        ->and($hooks->collect('SafeCollector'))->toBe(['safe-collector'])
-        ->and($hooks->toArray())->toBe([]);
+        ->and($hooks->collect('SafeCollector'))->toBe(['safe-collector']);
+});
+
+test('nested collector exceptions do not break later collector dispatches', function () {
+    $hooks = new Hooks();
+
+    $hooks->addCollector('ExplodeCollector', function () use ($hooks): string {
+        try {
+            $hooks->collect('InnerExplode');
+        } catch (RuntimeException $exception) {
+            expect($exception->getMessage())->toBe('boom');
+        }
+
+        return 'recovered';
+    });
+
+    $hooks->addCollector('InnerExplode', function (): string {
+        throw new RuntimeException('boom');
+    });
+
+    $hooks->addCollector('SafeCollector', fn (): string => 'safe');
+
+    expect($hooks->collect('ExplodeCollector'))->toBe(['recovered'])
+        ->and($hooks->collect('SafeCollector'))->toBe(['safe']);
 });
