@@ -9,17 +9,20 @@ use Magdicom\Renderer;
 use Stringable;
 use UnexpectedValueException;
 
+/** @implements Renderer<mixed> */
 class ConcatenateRenderer implements Renderer
 {
+    public function __construct(
+        private readonly string $separator = ''
+    ) {
+    }
+
     public function process(array $results, ProcessingContext $context): string
     {
-        $rendered = '';
-
-        foreach ($results as $result) {
-            $rendered .= $this->stringify($result);
-        }
-
-        return $rendered;
+        return implode(
+            $this->separator,
+            array_map($this->stringify(...), $results)
+        );
     }
 
     private function stringify(mixed $value): string

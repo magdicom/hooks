@@ -52,6 +52,36 @@ test('render supports renderer instances and class names', function () {
     expect($hooks->render('RenderKinds'))->toBe('firstsecond');
 });
 
+test('render supports callable renderers', function () {
+    $hooks = new Hooks(new class () implements Resolver {
+        public function resolve(string $className): object
+        {
+            throw new RuntimeException('callable strings should not resolve through the resolver');
+        }
+    });
+
+    $hooks->addCollector('CallableRenderKinds', fn (): string => 'first');
+    $hooks->addCollector('CallableRenderKinds', fn (): string => 'second');
+
+    $hooks->setRenderer('CallableRenderKinds', static function (array $results, ProcessingContext $context): string {
+        return $context->hookPoint() . ':' . implode('|', $results);
+    });
+
+    expect($hooks->render('CallableRenderKinds'))->toBe('CallableRenderKinds:first|second');
+
+    $hooks->setRenderer('CallableRenderKinds', new TestInvokableRenderer());
+
+    expect($hooks->render('CallableRenderKinds'))->toBe('invokable:first+second');
+
+    $hooks->setRenderer('CallableRenderKinds', 'testRendererFunction');
+
+    expect($hooks->render('CallableRenderKinds'))->toBe('function:first-second');
+
+    $hooks->setRenderer('CallableRenderKinds', TestRendererCallbacks::class . '::render');
+
+    expect($hooks->render('CallableRenderKinds'))->toBe('static:first/second');
+});
+
 test('assigning a processor replaces a renderer and assigning a renderer replaces a processor', function () {
     $hooks = new Hooks();
     $hooks->addCollector('ReplaceProcessor', fn (): string => 'first');
@@ -78,6 +108,7 @@ test('class name renderers resolve through the configured resolver', function ()
         {
             expect($className)->toBe(ConcatenateRenderer::class);
 
+            /** @implements Renderer<string> */
             return new class () implements Renderer {
                 public function process(array $results, ProcessingContext $context): string
                 {
@@ -92,6 +123,34 @@ test('class name renderers resolve through the configured resolver', function ()
     $hooks->setRenderer('ResolverRenderer', ConcatenateRenderer::class);
 
     expect($hooks->render('ResolverRenderer'))->toBe('ResolverRenderer:left|right');
+});
+
+test('renderer callable strings execute directly while non-callable strings resolve through the resolver', function () {
+    $resolver = new class () implements Resolver {
+        /** @var list<string> */
+        public array $resolved = [];
+
+        public function resolve(string $className): object
+        {
+            $this->resolved[] = $className;
+
+            return new ConcatenateRenderer('|');
+        }
+    };
+
+    $hooks = new Hooks($resolver);
+    $hooks->addCollector('RendererStringKinds', fn (): string => 'first');
+    $hooks->addCollector('RendererStringKinds', fn (): string => 'second');
+
+    $hooks->setRenderer('RendererStringKinds', 'testRendererFunction');
+
+    expect($hooks->render('RendererStringKinds'))->toBe('function:first-second')
+        ->and($resolver->resolved)->toBe([]);
+
+    $hooks->setRenderer('RendererStringKinds', ConcatenateRenderer::class);
+
+    expect($hooks->render('RendererStringKinds'))->toBe('first|second')
+        ->and($resolver->resolved)->toBe([ConcatenateRenderer::class]);
 });
 
 test('built in processors return the expected empty and non-empty values', function () {
@@ -112,14 +171,29 @@ test('built in processors return the expected empty and non-empty values', funct
         }], $context))->toBe('a12.51obj');
 });
 
-test('concatenate renderer rejects arrays and non stringable objects', function () {
+test('concatenate renderer supports default and custom separators while preserving null positions', function () {
+    $context = new ProcessingContext('Separator');
+
+    expect((new ConcatenateRenderer())->process(['first', 'second'], $context))->toBe('firstsecond')
+        ->and((new ConcatenateRenderer('|'))->process(['first', 'second'], $context))->toBe('first|second')
+        ->and((new ConcatenateRenderer('|'))->process(['first', null, 'third'], $context))->toBe('first||third');
+});
+
+test('concatenate renderer rejects arrays resources and non stringable objects', function () {
     $renderer = new ConcatenateRenderer();
     $context = new ProcessingContext('Unexpected');
+    $resource = fopen('php://memory', 'rb');
+
+    expect($resource)->not->toBeFalse();
 
     expect(fn () => $renderer->process([['bad']], $context))
         ->toThrow(UnexpectedValueException::class)
+        ->and(fn () => $renderer->process([$resource], $context))
+        ->toThrow(UnexpectedValueException::class)
         ->and(fn () => $renderer->process([new stdClass()], $context))
         ->toThrow(UnexpectedValueException::class);
+
+    fclose($resource);
 });
 
 test('resolved renderer classes must implement the renderer contract', function () {
@@ -138,3 +212,33 @@ test('resolved renderer classes must implement the renderer contract', function 
     expect(fn () => $hooks->render('InvalidResolvedRenderer'))
         ->toThrow(InvalidRendererException::class);
 });
+
+test('render validates callable renderer output types explicitly', function () {
+    $hooks = new Hooks();
+    $hooks->addCollector('InvalidCallableRenderer', fn (): string => 'value');
+    $hooks->setRenderer('InvalidCallableRenderer', static fn (array $results, ProcessingContext $context): mixed => 123);
+
+    expect(fn () => $hooks->render('InvalidCallableRenderer'))
+        ->toThrow(InvalidRendererException::class, 'Callable renderer for collector hook point "InvalidCallableRenderer" must return string, int returned.');
+});
+
+class TestInvokableRenderer
+{
+    public function __invoke(array $results, ProcessingContext $context): string
+    {
+        return 'invokable:' . implode('+', $results);
+    }
+}
+
+class TestRendererCallbacks
+{
+    public static function render(array $results, ProcessingContext $context): string
+    {
+        return 'static:' . implode('/', $results);
+    }
+}
+
+function testRendererFunction(array $results, ProcessingContext $context): string
+{
+    return 'function:' . implode('-', $results);
+}

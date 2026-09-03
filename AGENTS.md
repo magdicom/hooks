@@ -83,8 +83,13 @@ Callback-specific `hasAction`, `hasFilter`, `hasCollector`, `removeAction`, `rem
 `Hooks` accepts an optional `Resolver` in its constructor. Non-static class callback registrations must resolve through that abstraction rather than direct instantiation.
 
 Collector processing contracts are collector-only. `ProcessingContext` must stay minimal and immutable: hook point name plus original invocation arguments, without duplicating collected results or exposing the dispatcher.
+`ResultProcessor` and `Renderer` PHPDoc generics are part of the public static-analysis contract and should stay accurate when adding new built-ins or examples.
 Processor registration is collector-only. `collect()` must remain raw, while `process()` uses the configured processor for that collector endpoint.
 Renderer registration must reuse the same processor slot. `render()` requires a renderer and returns a string.
+String processors and renderers that PHP recognizes as callables, such as named functions and static method strings, must execute directly before non-callable strings are treated as resolver-backed class references.
+Callable renderers must be validated at runtime so non-string output fails with `InvalidRendererException` instead of an incidental `TypeError`.
+`ConcatenateRenderer` must preserve its empty-string default behavior while allowing an explicit separator between individually rendered entries. `null` values must remain present as empty rendered positions when a separator is used.
+Keep explicit coverage for the distinction between callable strings and resolver-backed class strings for both processors and renderers.
 Invalid class-based processor and renderer resolution should fail with explicit package exceptions, not generic argument errors.
 
 ## 2.0 Constraints

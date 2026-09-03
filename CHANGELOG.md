@@ -21,6 +21,10 @@ Version 2.0 is intentionally breaking and does not preserve version-1 dispatch o
 - add collector-only processor registration and processed dispatch APIs while keeping `collect()` as raw access
 - add renderer-specific collector dispatch plus built-in concatenate, first, first-non-null, and last processors
 - harden collector processing with explicit invalid processor/renderer exceptions and nested collect/process/render regression coverage
+- add callable renderer support and execute PHP-callable processor/renderer strings before resolver-backed class-name resolution
+- add configurable separator support to `ConcatenateRenderer` while preserving empty-string defaults and null slot positions
+- add PHPStan generics to `ResultProcessor` and `Renderer`, with matching annotations on built-in processors and test doubles
+- add explicit regression coverage and documentation for callable-string versus resolver-backed class-string processor and renderer resolution
 - make listener mutations during dispatch apply only to the next invocation via explicit snapshots
 - add regression coverage for nested, recursive, and exception-safe execution cleanup
 - expand automated coverage for priority ordering and repeated independent invocations across the new APIs

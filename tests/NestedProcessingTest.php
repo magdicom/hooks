@@ -84,6 +84,7 @@ test('rendering remains isolated after nested processor exceptions', function ()
     $hooks->setRenderer('OuterRender', new class ($hooks) extends ConcatenateRenderer {
         public function __construct(private Hooks $hooks)
         {
+            parent::__construct();
         }
 
         public function process(array $results, ProcessingContext $context): string

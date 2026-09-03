@@ -22,6 +22,7 @@ test('processing context arguments are returned as a defensive copy', function (
 });
 
 test('result processor receives raw collector results and processing context', function () {
+    /** @implements ResultProcessor<mixed, array{hook: string, arguments: list<mixed>, results: list<mixed>}> */
     $processor = new class () implements ResultProcessor {
         public function process(array $results, ProcessingContext $context): mixed
         {
@@ -42,6 +43,7 @@ test('result processor receives raw collector results and processing context', f
 });
 
 test('renderer is a specialized result processor with string output', function () {
+    /** @implements Renderer<string> */
     $renderer = new class () implements Renderer {
         public function process(array $results, ProcessingContext $context): string
         {

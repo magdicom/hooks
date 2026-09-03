@@ -7,6 +7,7 @@ namespace Magdicom\Processor;
 use Magdicom\ProcessingContext;
 use Magdicom\ResultProcessor;
 
+/** @implements ResultProcessor<mixed, mixed> */
 class LastProcessor implements ResultProcessor
 {
     public function process(array $results, ProcessingContext $context): mixed

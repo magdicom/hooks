@@ -14,6 +14,8 @@ The `2.0` branch currently exposes three explicit hook models:
 - filters for sequential value transformation
 - collectors for raw result gathering
 
+The action and filter terminology is inspired by the WordPress hooks system. This package is independently implemented and is not affiliated with or endorsed by WordPress or the WordPress Foundation.
+
 ## Installation
 
 This package currently targets PHP `8.2` or newer.
@@ -214,6 +216,8 @@ The public processing types now exist for collector endpoints:
 - `Renderer::process(array $results, ProcessingContext $context): string`
 - `ProcessingContext`
 
+For static analysis, `ResultProcessor` now documents generic raw-result and processed-result templates, and `Renderer` specializes that contract to a string result.
+
 `ProcessingContext` contains only:
 
 - the collector hook point name
@@ -238,6 +242,7 @@ Collector endpoints can now keep raw `collect()` access while also exposing proc
 - the class name string if a class-based processor was assigned
 
 Callable processors must accept `(array $results, ProcessingContext $context): mixed`.
+If a string is callable in PHP, such as a named function or static method string, it is executed directly as a processor. Non-callable strings are treated as class names and resolved through `Resolver`.
 
 Class-name processors resolve through the configured `Resolver` and must implement `ResultProcessor`.
 
@@ -264,16 +269,20 @@ If a class-name processor resolves to an object that does not implement `ResultP
 
 `collect()` always bypasses processors and returns raw one-entry-per-callback results.
 `process()` runs the configured collector processor and returns its output as-is.
+Exact registration removal still goes through `RegistrationHandle::remove()`. Callback-based `removeAction()`, `removeFilter()`, and `removeCollector()` remain priority-aware callback removal APIs and do not accept registration handles.
 
 ## Renderers and Built-ins
 
 Renderers are specialized processors that guarantee string output and reuse the same single processor slot:
 
-- `setRenderer(string $hookName, Renderer|string $renderer): self`
+- `setRenderer(string $hookName, Renderer|callable|string $renderer): self`
 - `render(string $hookName, mixed ...$arguments): string`
 
 `render()` requires the configured processor to be a renderer. If no renderer is configured, it throws `MissingRendererException`.
-If a collector endpoint is configured with a non-renderer processor, or a class-name renderer resolves to the wrong type, `render()` throws `InvalidRendererException`.
+If a collector endpoint is configured with a non-renderer processor, a class-name renderer resolves to the wrong type, or a callable renderer returns a non-string value, `render()` throws `InvalidRendererException`.
+
+Callable renderers must accept `(array $results, ProcessingContext $context): string`.
+If a string is callable in PHP, such as a named function or static method string, it is executed directly as a renderer. Non-callable strings are treated as class names and resolved through `Resolver`.
 
 Built-ins currently shipped for collector endpoints:
 
@@ -281,6 +290,8 @@ Built-ins currently shipped for collector endpoints:
 - `Magdicom\Processor\FirstProcessor`
 - `Magdicom\Processor\FirstNonNullProcessor`
 - `Magdicom\Processor\LastProcessor`
+
+`ConcatenateRenderer` accepts an optional separator string. Each raw result is rendered individually using the existing string/scalar/Stringable/null rules, then the rendered entries are joined with that separator. `null` still occupies its original position as an empty rendered entry.
 
 ```php
 use Magdicom\Hooks;
@@ -293,6 +304,14 @@ $hooks->addCollector('report', fn (): string => 'first');
 $hooks->addCollector('report', fn (): string => 'second');
 
 $hooks->setRenderer('report', new ConcatenateRenderer());
+echo $hooks->render('report');
+
+$hooks->setRenderer('report', new ConcatenateRenderer(' | '));
+echo $hooks->render('report');
+
+$hooks->setRenderer('report', static function (array $results, ProcessingContext $context): string {
+    return implode(', ', $results);
+});
 echo $hooks->render('report');
 
 $hooks->setProcessor('report', new FirstProcessor());
@@ -334,7 +353,8 @@ Version `2.0` removes the legacy `register()` / `all()` dispatch model entirely.
 - Sequential value transformations should move to `addFilter()` / `applyFilters()`.
 - Output aggregation should move to `addCollector()` / `collect()`.
 - Global parameter arrays should move to explicit invocation arguments or typed context objects.
-- String conversion should use `implode()` temporarily until renderers are added in a later milestone.
+- Optional collector post-processing should move to `setProcessor()` / `process()`.
+- Optional collector string rendering should move to `setRenderer()` / `render()`.
 
 Example migration:
 

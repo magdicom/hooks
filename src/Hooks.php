@@ -9,8 +9,9 @@ namespace Magdicom;
  * @phpstan-type HookCallable callable(mixed...): mixed
  * @phpstan-type HookCallback HookCallable|HookCallbackArray
  * @phpstan-type ProcessorCallable callable(list<mixed>, ProcessingContext): mixed
- * @phpstan-type ProcessorReference ResultProcessor|ProcessorCallable|class-string<ResultProcessor>
- * @phpstan-type RendererReference Renderer|class-string<Renderer>
+ * @phpstan-type RendererCallable callable(list<mixed>, ProcessingContext): string
+ * @phpstan-type ProcessorReference ResultProcessor<mixed, mixed>|ProcessorCallable|class-string<ResultProcessor<mixed, mixed>>
+ * @phpstan-type RendererReference Renderer<mixed>|RendererCallable|class-string<Renderer<mixed>>
  * @phpstan-type HookData array{id: int, priority: int, callback: HookCallback}
  * @phpstan-type HookPointData array{sorted: bool, data: list<HookData>}
  * @phpstan-type HookType 'action'|'filter'|'collector'
@@ -163,7 +164,7 @@ class Hooks
      * @param RendererReference $renderer
      * @return $this
      */
-    public function setRenderer(string $hookPoint, Renderer|string $renderer): self
+    public function setRenderer(string $hookPoint, Renderer|callable|string $renderer): self
     {
         return $this->setProcessor($hookPoint, $renderer);
     }
@@ -385,7 +386,7 @@ class Hooks
             return $processor->process($results, $context);
         }
 
-        if (is_string($processor)) {
+        if (is_string($processor) && ! is_callable($processor)) {
             $resolved = $this->resolver->resolve($processor);
 
             if (! $resolved instanceof ResultProcessor) {
@@ -411,7 +412,7 @@ class Hooks
             return $processor->process($results, $context);
         }
 
-        if (is_string($processor)) {
+        if (is_string($processor) && ! is_callable($processor)) {
             $resolved = $this->resolver->resolve($processor);
 
             if (! $resolved instanceof Renderer) {
@@ -425,7 +426,17 @@ class Hooks
             return $resolved->process($results, $context);
         }
 
-        throw InvalidRendererException::forHookPoint($context->hookPoint());
+        if (! is_callable($processor)) {
+            throw InvalidRendererException::forHookPoint($context->hookPoint());
+        }
+
+        $result = $processor($results, $context);
+
+        if (! is_string($result)) {
+            throw InvalidRendererException::forReturnedType($context->hookPoint(), $result);
+        }
+
+        return $result;
     }
 
     /**

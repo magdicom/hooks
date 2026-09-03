@@ -24,4 +24,13 @@ class InvalidRendererException extends RuntimeException
             Renderer::class
         ));
     }
+
+    public static function forReturnedType(string $hookPoint, mixed $value): self
+    {
+        return new self(sprintf(
+            'Callable renderer for collector hook point "%s" must return string, %s returned.',
+            $hookPoint,
+            get_debug_type($value)
+        ));
+    }
 }
