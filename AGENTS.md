@@ -49,6 +49,13 @@ Treat these methods on `Magdicom\Hooks` as the supported public surface unless t
 - `applyFilters`
 - `addCollector`
 - `collect`
+- `setProcessor`
+- `hasProcessor`
+- `processor`
+- `clearProcessor`
+- `process`
+- `setRenderer`
+- `render`
 - `has`
 - `hasAction`
 - `hasFilter`
@@ -69,7 +76,16 @@ Treat these methods on `Magdicom\Hooks` as the supported public surface unless t
 - `setSourceFile`
 - `getSourceFile`
 
-Treat `Magdicom\RegistrationHandle` as public as well.
+Treat `Magdicom\RegistrationHandle`, `Magdicom\Resolver`, `Magdicom\NativeResolver`, `Magdicom\ProcessingContext`, `Magdicom\ResultProcessor`, `Magdicom\Renderer`, `Magdicom\MissingProcessorException`, `Magdicom\MissingRendererException`, `Magdicom\InvalidProcessorException`, `Magdicom\InvalidRendererException`, and the built-ins under `Magdicom\Processor\` as public as well.
+
+Callback-specific `hasAction`, `hasFilter`, `hasCollector`, `removeAction`, `removeFilter`, and `removeCollector` are priority-aware. Exact registration removal should go through `RegistrationHandle::remove()`.
+
+`Hooks` accepts an optional `Resolver` in its constructor. Non-static class callback registrations must resolve through that abstraction rather than direct instantiation.
+
+Collector processing contracts are collector-only. `ProcessingContext` must stay minimal and immutable: hook point name plus original invocation arguments, without duplicating collected results or exposing the dispatcher.
+Processor registration is collector-only. `collect()` must remain raw, while `process()` uses the configured processor for that collector endpoint.
+Renderer registration must reuse the same processor slot. `render()` requires a renderer and returns a string.
+Invalid class-based processor and renderer resolution should fail with explicit package exceptions, not generic argument errors.
 
 ## 2.0 Constraints
 
@@ -120,6 +136,10 @@ Good task slices in this repo:
 - `Remove version-1 dispatch APIs from Hooks`
 - `Switch hook invocation to variadic arguments`
 - `Add type-aware action/filter/collector removal APIs`
+- `Add resolver-backed class callback support`
+- `Add collector processing contracts and immutable context`
+- `Add collector processor registration and process()`
+- `Add renderer convenience and minimal built-ins`
 - `Document the version-2 migration path`
 
 Weak task slices:

@@ -8,6 +8,9 @@ namespace Magdicom;
  * @phpstan-type HookCallbackArray array{0: object|string, 1: string}
  * @phpstan-type HookCallable callable(mixed...): mixed
  * @phpstan-type HookCallback HookCallable|HookCallbackArray
+ * @phpstan-type ProcessorCallable callable(list<mixed>, ProcessingContext): mixed
+ * @phpstan-type ProcessorReference ResultProcessor|ProcessorCallable|class-string<ResultProcessor>
+ * @phpstan-type RendererReference Renderer|class-string<Renderer>
  * @phpstan-type HookData array{id: int, priority: int, callback: HookCallback}
  * @phpstan-type HookPointData array{sorted: bool, data: list<HookData>}
  * @phpstan-type HookType 'action'|'filter'|'collector'
@@ -19,6 +22,13 @@ namespace Magdicom;
  */
 class Hooks
 {
+    private Resolver $resolver;
+
+    /**
+     * @var array<string, ProcessorReference>
+     */
+    private array $processors = [];
+
     /**
      * @var HookRegistries
      */
@@ -39,8 +49,9 @@ class Hooks
 
     private ?string $sourceFile = null;
 
-    public function __construct()
+    public function __construct(?Resolver $resolver = null)
     {
+        $this->resolver = $resolver ?? new NativeResolver();
     }
 
     /**
@@ -113,39 +124,116 @@ class Hooks
         return $results;
     }
 
+    /**
+     * @param ProcessorReference $processor
+     * @return $this
+     */
+    public function setProcessor(string $hookPoint, ResultProcessor|callable|string $processor): self
+    {
+        $this->processors[$hookPoint] = $processor;
+
+        return $this;
+    }
+
+    public function hasProcessor(string $hookPoint): bool
+    {
+        return array_key_exists($hookPoint, $this->processors);
+    }
+
+    /**
+     * @return ProcessorReference|null
+     */
+    public function processor(string $hookPoint): ResultProcessor|callable|string|null
+    {
+        return $this->processors[$hookPoint] ?? null;
+    }
+
+    public function clearProcessor(string $hookPoint): bool
+    {
+        if (! array_key_exists($hookPoint, $this->processors)) {
+            return false;
+        }
+
+        unset($this->processors[$hookPoint]);
+
+        return true;
+    }
+
+    /**
+     * @param RendererReference $renderer
+     * @return $this
+     */
+    public function setRenderer(string $hookPoint, Renderer|string $renderer): self
+    {
+        return $this->setProcessor($hookPoint, $renderer);
+    }
+
+    public function process(string $hookPoint, mixed ...$arguments): mixed
+    {
+        $processor = $this->processor($hookPoint);
+
+        if ($processor === null) {
+            throw MissingProcessorException::forHookPoint($hookPoint);
+        }
+
+        return $this->invokeProcessor(
+            $processor,
+            $this->collect($hookPoint, ...$arguments),
+            new ProcessingContext($hookPoint, ...$arguments)
+        );
+    }
+
+    public function render(string $hookPoint, mixed ...$arguments): string
+    {
+        $processor = $this->processor($hookPoint);
+
+        if ($processor === null) {
+            throw MissingRendererException::forHookPoint($hookPoint);
+        }
+
+        return $this->invokeRenderer(
+            $processor,
+            $this->collect($hookPoint, ...$arguments),
+            new ProcessingContext($hookPoint, ...$arguments)
+        );
+    }
+
     public function has(string $hookPoint): bool
     {
         return $this->findAnyHookPointData($hookPoint) !== null;
     }
 
     /**
-     * @param RegistrationHandle|HookCallbackArray|HookCallable|null $listener
+     * @param HookCallback|null $callback
      */
     public function hasAction(
         string $hookPoint,
-        RegistrationHandle|array|callable|null $listener = null
+        array|callable|null $callback = null,
+        int $priority = 10
     ): bool {
-        return $this->hasListener('action', $hookPoint, $listener);
+        return $this->hasListener('action', $hookPoint, $callback, $priority);
     }
 
     /**
-     * @param RegistrationHandle|HookCallbackArray|HookCallable|null $listener
+     * @param HookCallback|null $callback
      */
     public function hasFilter(
         string $hookPoint,
-        RegistrationHandle|array|callable|null $listener = null
+        array|callable|null $callback = null,
+        int $priority = 10
     ): bool {
-        return $this->hasListener('filter', $hookPoint, $listener);
+        return $this->hasListener('filter', $hookPoint, $callback, $priority);
     }
 
     /**
-     * @param RegistrationHandle|HookCallbackArray|HookCallable|null $listener
+     * @param HookCallback|null $callback
      */
     public function hasCollector(
         string $hookPoint,
-        RegistrationHandle|array|callable|null $listener = null
+        array|callable|null $callback = null,
+        int $priority = 10
     ): bool {
-        return $this->hasListener('collector', $hookPoint, $listener);
+        return $this->hasListener('collector', $hookPoint, $callback, $priority);
     }
 
     public function count(?string $hookPoint = null): int
@@ -226,27 +314,27 @@ class Hooks
     }
 
     /**
-     * @param RegistrationHandle|HookCallbackArray|HookCallable $listener
+     * @param HookCallback $callback
      */
-    public function removeAction(string $hookPoint, RegistrationHandle|array|callable $listener): bool
+    public function removeAction(string $hookPoint, array|callable $callback, int $priority = 10): bool
     {
-        return $this->removeListener('action', $hookPoint, $listener);
+        return $this->removeListener('action', $hookPoint, $callback, $priority);
     }
 
     /**
-     * @param RegistrationHandle|HookCallbackArray|HookCallable $listener
+     * @param HookCallback $callback
      */
-    public function removeFilter(string $hookPoint, RegistrationHandle|array|callable $listener): bool
+    public function removeFilter(string $hookPoint, array|callable $callback, int $priority = 10): bool
     {
-        return $this->removeListener('filter', $hookPoint, $listener);
+        return $this->removeListener('filter', $hookPoint, $callback, $priority);
     }
 
     /**
-     * @param RegistrationHandle|HookCallbackArray|HookCallable $listener
+     * @param HookCallback $callback
      */
-    public function removeCollector(string $hookPoint, RegistrationHandle|array|callable $listener): bool
+    public function removeCollector(string $hookPoint, array|callable $callback, int $priority = 10): bool
     {
-        return $this->removeListener('collector', $hookPoint, $listener);
+        return $this->removeListener('collector', $hookPoint, $callback, $priority);
     }
 
     public function removeAll(?string $hookPoint = null): int
@@ -285,6 +373,62 @@ class Hooks
     }
 
     /**
+     * @param ProcessorReference $processor
+     * @param list<mixed> $results
+     */
+    private function invokeProcessor(
+        ResultProcessor|callable|string $processor,
+        array $results,
+        ProcessingContext $context
+    ): mixed {
+        if ($processor instanceof ResultProcessor) {
+            return $processor->process($results, $context);
+        }
+
+        if (is_string($processor)) {
+            $resolved = $this->resolver->resolve($processor);
+
+            if (! $resolved instanceof ResultProcessor) {
+                throw InvalidProcessorException::forResolvedClass($processor);
+            }
+
+            return $resolved->process($results, $context);
+        }
+
+        return $processor($results, $context);
+    }
+
+    /**
+     * @param ProcessorReference $processor
+     * @param list<mixed> $results
+     */
+    private function invokeRenderer(
+        ResultProcessor|callable|string $processor,
+        array $results,
+        ProcessingContext $context
+    ): string {
+        if ($processor instanceof Renderer) {
+            return $processor->process($results, $context);
+        }
+
+        if (is_string($processor)) {
+            $resolved = $this->resolver->resolve($processor);
+
+            if (! $resolved instanceof Renderer) {
+                if ($resolved instanceof ResultProcessor) {
+                    throw InvalidRendererException::forHookPoint($context->hookPoint());
+                }
+
+                throw InvalidRendererException::forResolvedClass($processor);
+            }
+
+            return $resolved->process($results, $context);
+        }
+
+        throw InvalidRendererException::forHookPoint($context->hookPoint());
+    }
+
+    /**
      * @param HookCallback $callback
      */
     private function prepareCallback(array|callable $callback): callable
@@ -293,7 +437,9 @@ class Hooks
             return $callback;
         }
 
-        $instance = new $callback[0]();
+        $instance = is_string($callback[0])
+            ? $this->resolver->resolve($callback[0])
+            : $callback[0];
         $method = $callback[1];
 
         return static fn (...$arguments) => $instance->$method(...$arguments);
@@ -352,18 +498,19 @@ class Hooks
 
     /**
      * @param HookType $type
-     * @param RegistrationHandle|HookCallbackArray|HookCallable|null $listener
+     * @param HookCallback|null $callback
      */
     private function hasListener(
         string $type,
         string $hookPoint,
-        RegistrationHandle|array|callable|null $listener = null
+        array|callable|null $callback = null,
+        int $priority = 10
     ): bool {
-        if ($listener === null) {
+        if ($callback === null) {
             return isset($this->hookPoints[$type][$hookPoint]) && $this->hookPoints[$type][$hookPoint]['data'] !== [];
         }
 
-        return $this->findRegistrationLocation($type, $hookPoint, $listener) !== null;
+        return $this->findCallbackRegistrationLocation($type, $hookPoint, $callback, $priority) !== null;
     }
 
     /**
@@ -380,11 +527,11 @@ class Hooks
 
     /**
      * @param HookType $type
-     * @param RegistrationHandle|HookCallbackArray|HookCallable $listener
+     * @param HookCallback $callback
      */
-    private function removeListener(string $type, string $hookPoint, RegistrationHandle|array|callable $listener): bool
+    private function removeListener(string $type, string $hookPoint, array|callable $callback, int $priority): bool
     {
-        $location = $this->findRegistrationLocation($type, $hookPoint, $listener);
+        $location = $this->findCallbackRegistrationLocation($type, $hookPoint, $callback, $priority);
 
         if ($location === null) {
             return false;
@@ -417,13 +564,14 @@ class Hooks
 
     /**
      * @param HookType $type
-     * @param RegistrationHandle|HookCallbackArray|HookCallable $listener
+     * @param HookCallback $callback
      * @return array{type: HookType, index: int, id: int}|null
      */
-    private function findRegistrationLocation(
+    private function findCallbackRegistrationLocation(
         string $type,
         string $hookPoint,
-        RegistrationHandle|array|callable $listener
+        array|callable $callback,
+        int $priority
     ): ?array {
         $registry = $this->hookPoints[$type];
 
@@ -432,17 +580,8 @@ class Hooks
         }
 
         foreach ($registry[$hookPoint]['data'] as $index => $registeredListener) {
-            if ($listener instanceof RegistrationHandle) {
-                if ($listener->belongsTo($this)
-                    && $listener->type() === $type
-                    && $listener->id() === $registeredListener['id']) {
-                    return ['type' => $type, 'index' => $index, 'id' => $registeredListener['id']];
-                }
-
-                continue;
-            }
-
-            if ($this->callbacksMatch($registeredListener['callback'], $listener)) {
+            if ($registeredListener['priority'] === $priority
+                && $this->callbacksMatch($registeredListener['callback'], $callback)) {
                 return ['type' => $type, 'index' => $index, 'id' => $registeredListener['id']];
             }
         }

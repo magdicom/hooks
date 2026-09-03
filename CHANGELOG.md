@@ -15,10 +15,16 @@ Version 2.0 is intentionally breaking and does not preserve version-1 dispatch o
 - switch action, filter, and collector invocation to explicit variadic arguments and remove the global parameter bag
 - make registration handles instance-owned, remove magic handle forwarding, and change the default priority to 10
 - add type-aware action/filter/collector inspection and removal APIs to avoid ambiguous callback matching
+- make callback-specific action, filter, and collector lookup/removal priority-aware while keeping exact handle removal on registrations
+- add framework-neutral `Resolver` and `NativeResolver` support for non-static class callbacks, class-name processors, and class-name renderers without a container dependency
+- add public collector processing contracts via `ResultProcessor`, `Renderer`, and immutable `ProcessingContext`
+- add collector-only processor registration and processed dispatch APIs while keeping `collect()` as raw access
+- add renderer-specific collector dispatch plus built-in concatenate, first, first-non-null, and last processors
+- harden collector processing with explicit invalid processor/renderer exceptions and nested collect/process/render regression coverage
 - make listener mutations during dispatch apply only to the next invocation via explicit snapshots
 - add regression coverage for nested, recursive, and exception-safe execution cleanup
 - expand automated coverage for priority ordering and repeated independent invocations across the new APIs
-- document the 2.0 execution foundation and explicitly defer renderer/result-processor work to a later milestone
+- document the collector-only processor and renderer model, including migration guidance for `collect()`, `process()`, and `render()`
 
 ## v1.0.5 - 2022-01-12
 

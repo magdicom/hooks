@@ -56,8 +56,10 @@ test('has and count reflect hook registrations', function () {
 
     expect($hooks->has('Inspect'))->toBeTrue()
         ->and($hooks->has('Missing'))->toBeFalse()
-        ->and($hooks->hasCollector('Inspect', $first))->toBeTrue()
         ->and($hooks->hasCollector('Inspect', $callback))->toBeTrue()
+        ->and($hooks->hasCollector('Inspect', $callback, 20))->toBeFalse()
+        ->and(array_map(fn (RegistrationHandle $handle): int => $handle->id(), $hooks->collectors('Inspect')))
+        ->toContain($first->id())
         ->and($hooks->count('Inspect'))->toBe(2)
         ->and($hooks->count())->toBeGreaterThanOrEqual(2);
 });
@@ -76,15 +78,20 @@ test('listeners returns ordered handles for a hook', function () {
         ->toBe([10, 20]);
 });
 
-test('typed removal supports callback and handle removal', function () {
+test('typed callback removal is priority-aware and handle removal stays exact', function () {
     $hooks = new Hooks();
     $callback = fn () => 'Callback';
     $handle = $hooks->addCollector('RemoveBy', fn () => 'Handle', 5);
     $hooks->addCollector('RemoveBy', $callback, 10);
+    $hooks->addCollector('RemoveBy', $callback, 20);
 
     expect($hooks->removeCollector('RemoveBy', $callback))->toBeTrue()
-        ->and($hooks->removeCollector('RemoveBy', $callback))->toBeFalse()
-        ->and($hooks->removeCollector('RemoveBy', $handle))->toBeTrue()
+        ->and($hooks->collect('RemoveBy'))->toBe(['Handle', 'Callback'])
+        ->and($hooks->hasCollector('RemoveBy', $callback))->toBeFalse()
+        ->and($hooks->hasCollector('RemoveBy', $callback, 20))->toBeTrue()
+        ->and($hooks->removeCollector('RemoveBy', $callback, 20))->toBeTrue()
+        ->and($hooks->hasCollector('RemoveBy', $callback, 20))->toBeFalse()
+        ->and($handle->remove())->toBeTrue()
         ->and($hooks->has('RemoveBy'))->toBeFalse();
 });
 
@@ -93,27 +100,44 @@ test('handles from another hooks instance never match local registrations', func
     $secondHooks = new Hooks();
 
     $foreignHandle = $firstHooks->addCollector('Shared', fn (): string => 'foreign');
-    $localHandle = $secondHooks->addCollector('Shared', fn (): string => 'local');
+    $localCallback = fn (): string => 'local';
+    $secondHooks->addCollector('Shared', $localCallback);
 
-    expect($secondHooks->hasCollector('Shared', $foreignHandle))->toBeFalse()
-        ->and($secondHooks->removeCollector('Shared', $foreignHandle))->toBeFalse()
-        ->and($secondHooks->hasCollector('Shared', $localHandle))->toBeTrue()
+    expect($secondHooks->hasCollector('Shared', $localCallback))->toBeTrue()
         ->and($secondHooks->collect('Shared'))->toBe(['local'])
-        ->and($firstHooks->collect('Shared'))->toBe(['foreign']);
+        ->and($foreignHandle->remove())->toBeTrue()
+        ->and($secondHooks->collect('Shared'))->toBe(['local'])
+        ->and($firstHooks->collect('Shared'))->toBe([]);
 });
 
 test('type-aware removals do not cross hook models', function () {
     $hooks = new Hooks();
     $callback = fn (): string => 'value';
 
-    $hooks->addAction('SharedType', $callback);
+    $actionCallback = fn (): string => 'value';
+
+    $hooks->addAction('SharedType', $actionCallback);
     $hooks->addCollector('SharedType', $callback);
 
-    expect($hooks->removeAction('SharedType', $callback))->toBeTrue()
+    expect($hooks->removeAction('SharedType', $actionCallback))->toBeTrue()
         ->and($hooks->hasAction('SharedType'))->toBeFalse()
         ->and($hooks->hasCollector('SharedType', $callback))->toBeTrue()
         ->and($hooks->removeCollector('SharedType', $callback))->toBeTrue()
         ->and($hooks->has('SharedType'))->toBeFalse();
+});
+
+test('callback-specific has checks are priority-aware', function () {
+    $hooks = new Hooks();
+    $callback = fn (): string => 'value';
+
+    $hooks->addCollector('PriorityAwareHas', $callback, 10);
+    $hooks->addCollector('PriorityAwareHas', $callback, 20);
+
+    expect($hooks->hasCollector('PriorityAwareHas', $callback))->toBeTrue()
+        ->and($hooks->hasCollector('PriorityAwareHas', $callback, 20))->toBeTrue()
+        ->and($hooks->removeCollector('PriorityAwareHas', $callback))->toBeTrue()
+        ->and($hooks->hasCollector('PriorityAwareHas', $callback))->toBeFalse()
+        ->and($hooks->hasCollector('PriorityAwareHas', $callback, 20))->toBeTrue();
 });
 
 test('removeAll clears one hook or the entire registry', function () {

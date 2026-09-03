@@ -32,7 +32,8 @@ $results = $hooks->collect('menu');
 - Output aggregation migrates from `register()` / `all()` to `addCollector()` and `collect()`.
 - Global parameter arrays migrate to explicit invocation arguments.
 - Shared invocation context should be passed as a typed context object when several callbacks need the same state.
-- String conversion should temporarily use `implode()` until the renderer milestone is implemented.
+- If collected output needs post-processing, configure a collector processor and call `process()`.
+- If collected output needs string rendering, configure a collector renderer and call `render()`.
 
 ## Signature Changes
 
@@ -67,5 +68,29 @@ These version-1 APIs are no longer available in 2.0:
 - Actions ignore callback return values.
 - Filters return the original input when no listeners are registered.
 - Collectors return `[]` when no listeners are registered.
+- `collect()` always returns raw one-entry-per-callback results, even when a processor or renderer is configured.
+- `process()` throws `MissingProcessorException` when no collector processor is configured.
+- `render()` throws `MissingRendererException` when no collector renderer is configured.
 - Equal-priority listeners keep registration order.
 - Registrations added or removed during dispatch affect only later invocations.
+
+## Optional Collector Processing
+
+If a version-1 integration depended on collecting values and then converting them into a final shape, keep registration on collectors and make the processing step explicit in version 2.
+
+```php
+use Magdicom\Hooks;
+use Magdicom\Processor\ConcatenateRenderer;
+
+$hooks = new Hooks();
+
+$hooks->addCollector('menu', fn (): string => '<li>Home</li>');
+$hooks->addCollector('menu', fn (): string => '<li>Docs</li>');
+
+$raw = $hooks->collect('menu');
+
+$hooks->setRenderer('menu', new ConcatenateRenderer());
+$html = $hooks->render('menu');
+```
+
+Class-name processors and renderers resolve through the framework-neutral `Resolver` abstraction. `new Hooks()` uses `NativeResolver` automatically, and a framework wrapper can swap in its own resolver implementation later.

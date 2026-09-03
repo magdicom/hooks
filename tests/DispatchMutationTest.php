@@ -10,9 +10,9 @@ test('action dispatch uses a listener snapshot when listeners are removed during
         $events[] = 'second';
     }, 20);
 
-    $hooks->addAction('ActionMutate', function () use (&$events, $hooks, $removed): void {
+    $hooks->addAction('ActionMutate', function () use (&$events, $removed): void {
         $events[] = 'first';
-        $hooks->removeAction('ActionMutate', $removed);
+        $removed->remove();
     }, 10);
 
     $hooks->doAction('ActionMutate');
@@ -68,8 +68,8 @@ test('collector dispatch applies removals on the next invocation only', function
 
     $removed = $hooks->addCollector('CollectorMutate', fn (): string => 'second', 20);
 
-    $hooks->addCollector('CollectorMutate', function () use ($hooks, $removed): string {
-        $hooks->removeCollector('CollectorMutate', $removed);
+    $hooks->addCollector('CollectorMutate', function () use ($removed): string {
+        $removed->remove();
 
         return 'first';
     }, 10);

@@ -83,10 +83,11 @@ use Magdicom\Hooks;
 
 $hooks = new Hooks();
 
-$handle = $hooks->addAction('boot', fn (): null => null, 10);
+$boot = fn (): null => null;
+$handle = $hooks->addAction('boot', $boot, 10);
 
 var_dump($hooks->has('boot'));
-var_dump($hooks->hasAction('boot', $handle));
+var_dump($hooks->hasAction('boot', $boot));
 var_dump($hooks->count('boot'));
 var_dump($hooks->listeners('boot'));
 var_dump($hooks->actions('boot'));
@@ -97,21 +98,23 @@ $handle->remove();
 Available inspection and removal methods:
 
 - `has(string $hookName): bool`
-- `hasAction(string $hookName, RegistrationHandle|array|callable|null $listener = null): bool`
-- `hasFilter(string $hookName, RegistrationHandle|array|callable|null $listener = null): bool`
-- `hasCollector(string $hookName, RegistrationHandle|array|callable|null $listener = null): bool`
+- `hasAction(string $hookName, array|callable|null $callback = null, int $priority = 10): bool`
+- `hasFilter(string $hookName, array|callable|null $callback = null, int $priority = 10): bool`
+- `hasCollector(string $hookName, array|callable|null $callback = null, int $priority = 10): bool`
 - `count(?string $hookName = null): int`
 - `listeners(string $hookName): array`
 - `actions(string $hookName): array`
 - `filters(string $hookName): array`
 - `collectors(string $hookName): array`
-- `removeAction(string $hookName, RegistrationHandle|array|callable $listener): bool`
-- `removeFilter(string $hookName, RegistrationHandle|array|callable $listener): bool`
-- `removeCollector(string $hookName, RegistrationHandle|array|callable $listener): bool`
+- `removeAction(string $hookName, array|callable $callback, int $priority = 10): bool`
+- `removeFilter(string $hookName, array|callable $callback, int $priority = 10): bool`
+- `removeCollector(string $hookName, array|callable $callback, int $priority = 10): bool`
 - `removeAll(?string $hookName = null): int`
 - `removeAllActions(?string $hookName = null): int`
 - `removeAllFilters(?string $hookName = null): int`
 - `removeAllCollectors(?string $hookName = null): int`
+
+Callback-specific `has*()` and `remove*()` calls are priority-aware. If the same callback is registered at priorities `10` and `20`, querying or removing priority `10` will not affect priority `20`.
 
 ## Ordering and Dispatch Safety
 
@@ -180,7 +183,123 @@ The registration APIs accept:
 - object method arrays such as `[$object, 'methodName']`
 - class method arrays such as `['ClassName', 'methodName']`
 
-If a class name and non-static method are provided, the class is instantiated and the method is called on that instance.
+If a class name and non-static method are provided, the callback is resolved through the configured resolver and the method is called on that instance.
+
+## Resolver
+
+`Hooks` accepts an optional framework-neutral resolver. `new Hooks()` uses `NativeResolver` automatically.
+
+```php
+use Magdicom\Hooks;
+use Magdicom\NativeResolver;
+
+$hooks = new Hooks(new NativeResolver());
+```
+
+The resolver contract is:
+
+- `Resolver::resolve(string $className): object`
+
+This resolver is used for:
+
+- non-static class callback registrations such as `[Listener::class, 'handle']`
+- class-name collector processors
+- class-name renderers
+
+## Collector Processing Contracts
+
+The public processing types now exist for collector endpoints:
+
+- `ResultProcessor::process(array $results, ProcessingContext $context): mixed`
+- `Renderer::process(array $results, ProcessingContext $context): string`
+- `ProcessingContext`
+
+`ProcessingContext` contains only:
+
+- the collector hook point name
+- the original invocation arguments
+
+Processors are collector-only. Actions remain side-effect hooks, and filters remain sequential transformation pipelines.
+
+## Collector Processors
+
+Collector endpoints can now keep raw `collect()` access while also exposing processed results through an endpoint-specific processor.
+
+- `setProcessor(string $hookName, ResultProcessor|callable|string $processor): self`
+- `hasProcessor(string $hookName): bool`
+- `processor(string $hookName): ResultProcessor|callable|string|null`
+- `clearProcessor(string $hookName): bool`
+- `process(string $hookName, mixed ...$arguments): mixed`
+
+`processor()` returns the configured processor reference exactly as stored:
+
+- a processor instance if one was assigned
+- the callable if a callable processor was assigned
+- the class name string if a class-based processor was assigned
+
+Callable processors must accept `(array $results, ProcessingContext $context): mixed`.
+
+Class-name processors resolve through the configured `Resolver` and must implement `ResultProcessor`.
+
+```php
+use Magdicom\Hooks;
+use Magdicom\ProcessingContext;
+use Magdicom\ResultProcessor;
+
+$hooks = new Hooks();
+
+$hooks->addCollector('report', fn (): string => 'first');
+$hooks->addCollector('report', fn (): string => 'second');
+
+$hooks->setProcessor('report', static function (array $results, ProcessingContext $context): string {
+    return implode(', ', $results);
+});
+
+var_dump($hooks->collect('report'));
+echo $hooks->process('report');
+```
+
+If no processor is configured for a collector endpoint, `process()` throws `MissingProcessorException`.
+If a class-name processor resolves to an object that does not implement `ResultProcessor`, `process()` throws `InvalidProcessorException`.
+
+`collect()` always bypasses processors and returns raw one-entry-per-callback results.
+`process()` runs the configured collector processor and returns its output as-is.
+
+## Renderers and Built-ins
+
+Renderers are specialized processors that guarantee string output and reuse the same single processor slot:
+
+- `setRenderer(string $hookName, Renderer|string $renderer): self`
+- `render(string $hookName, mixed ...$arguments): string`
+
+`render()` requires the configured processor to be a renderer. If no renderer is configured, it throws `MissingRendererException`.
+If a collector endpoint is configured with a non-renderer processor, or a class-name renderer resolves to the wrong type, `render()` throws `InvalidRendererException`.
+
+Built-ins currently shipped for collector endpoints:
+
+- `Magdicom\Processor\ConcatenateRenderer`
+- `Magdicom\Processor\FirstProcessor`
+- `Magdicom\Processor\FirstNonNullProcessor`
+- `Magdicom\Processor\LastProcessor`
+
+```php
+use Magdicom\Hooks;
+use Magdicom\Processor\ConcatenateRenderer;
+use Magdicom\Processor\FirstProcessor;
+
+$hooks = new Hooks();
+
+$hooks->addCollector('report', fn (): string => 'first');
+$hooks->addCollector('report', fn (): string => 'second');
+
+$hooks->setRenderer('report', new ConcatenateRenderer());
+echo $hooks->render('report');
+
+$hooks->setProcessor('report', new FirstProcessor());
+var_dump($hooks->process('report'));
+```
+
+`render()` is a string-only convenience for collector endpoints that are configured with a renderer.
 
 ## Debugging
 
@@ -204,12 +323,8 @@ $hooks->doAction('greeting');
 
 The current branch does not yet implement:
 
-- processors
-- renderers
-- resolvers
+- flattening, merge, and boolean processors
 - framework-specific integrations
-
-Until the renderer milestone exists, convert collected string results explicitly in userland, for example with `implode('', $hooks->collect('report'))`.
 
 ## Upgrading from 1.x
 

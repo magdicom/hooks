@@ -59,28 +59,30 @@ test('collectors return raw callback results without flattening', function () {
 
 test('inspection and removal APIs include action filter and collector registrations', function () {
     $hooks = new Hooks();
+    $actionCallback = fn (): null => null;
     $filterCallback = fn (string $value): string => $value . ' filtered';
+    $collectorCallback = fn (): string => 'collected';
 
-    $action = $hooks->addAction('Shared', fn (): null => null, 5);
+    $hooks->addAction('Shared', $actionCallback, 5);
     $filter = $hooks->addFilter('Shared', $filterCallback, 10);
-    $collector = $hooks->addCollector('Shared', fn (): string => 'collected', 15);
+    $collector = $hooks->addCollector('Shared', $collectorCallback, 15);
 
     $listeners = $hooks->listeners('Shared');
 
     expect($hooks->count('Shared'))->toBe(3)
         ->and($hooks->has('Shared'))->toBeTrue()
-        ->and($hooks->hasAction('Shared', $action))->toBeTrue()
+        ->and($hooks->hasAction('Shared', $actionCallback, 5))->toBeTrue()
         ->and($hooks->hasFilter('Shared', $filterCallback))->toBeTrue()
-        ->and($hooks->hasCollector('Shared', $collector))->toBeTrue()
-        ->and(array_map(fn (RegistrationHandle $handle): int => $handle->id(), $hooks->actions('Shared')))
-        ->toBe([$action->id()])
+        ->and($hooks->hasCollector('Shared', $collectorCallback, 15))->toBeTrue()
+        ->and(array_map(fn (RegistrationHandle $handle): int => $handle->priority(), $hooks->actions('Shared')))
+        ->toBe([5])
         ->and(array_map(fn (RegistrationHandle $handle): int => $handle->id(), $hooks->filters('Shared')))
         ->toBe([$filter->id()])
         ->and(array_map(fn (RegistrationHandle $handle): int => $handle->id(), $hooks->collectors('Shared')))
         ->toBe([$collector->id()])
         ->and(array_map(fn (RegistrationHandle $handle): string => $handle->type(), $listeners))
         ->toBe(['action', 'filter', 'collector'])
-        ->and($hooks->removeCollector('Shared', $collector))->toBeTrue()
+        ->and($collector->remove())->toBeTrue()
         ->and($hooks->count('Shared'))->toBe(2);
 });
 
