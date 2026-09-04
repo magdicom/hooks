@@ -1,6 +1,6 @@
 {
     "name": "magdicom/hooks",
-    "description": "A lightweight PHP action hooks package.",
+    "description": "A lightweight, framework-independent PHP hooks package with explicit actions, filters, collectors, and collector result processing.",
     "keywords": [
         "magdicom",
         "hooks"

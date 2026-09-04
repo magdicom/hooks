@@ -84,11 +84,16 @@ Callback-specific `hasAction`, `hasFilter`, `hasCollector`, `removeAction`, `rem
 
 Collector processing contracts are collector-only. `ProcessingContext` must stay minimal and immutable: hook point name plus original invocation arguments, without duplicating collected results or exposing the dispatcher.
 `ResultProcessor` and `Renderer` PHPDoc generics are part of the public static-analysis contract and should stay accurate when adding new built-ins or examples.
+`Hooks` must not pretend collector callback result types are statically linked to processor generic raw-result types. Narrower custom processor or renderer generics are fine on the implementations themselves, but `setProcessor()` and `setRenderer()` should stay documented against broad `list<mixed>` collector results until a future typed-endpoint design exists.
 Processor registration is collector-only. `collect()` must remain raw, while `process()` uses the configured processor for that collector endpoint.
 Renderer registration must reuse the same processor slot. `render()` requires a renderer and returns a string.
 String processors and renderers that PHP recognizes as callables, such as named functions and static method strings, must execute directly before non-callable strings are treated as resolver-backed class references.
+Do not add hidden metadata just to remember whether a callable entered the shared slot through `setProcessor()` or `setRenderer()`. Callable behavior must follow the runtime contract of the method being invoked.
 Callable renderers must be validated at runtime so non-string output fails with `InvalidRendererException` instead of an incidental `TypeError`.
 `ConcatenateRenderer` must preserve its empty-string default behavior while allowing an explicit separator between individually rendered entries. `null` values must remain present as empty rendered positions when a separator is used.
+`FlattenProcessor` must require array results at the top collector level, discard keys, preserve callback and array iteration order, and support depth `0`, positive depths, and `-1` unlimited flattening with clear standard-exception validation messages.
+`MergeProcessor` must require array results at the top collector level and follow `array_merge()` semantics exactly: later string keys replace earlier ones, numeric keys append with reindexing, and nested arrays remain unmerged.
+`BooleanAndProcessor` and `BooleanOrProcessor` must require strictly boolean collector results, use logical identity values for empty results, and never rely on PHP truthiness casts.
 Keep explicit coverage for the distinction between callable strings and resolver-backed class strings for both processors and renderers.
 Invalid class-based processor and renderer resolution should fail with explicit package exceptions, not generic argument errors.
 
@@ -132,6 +137,7 @@ Before finishing work:
 - Keep `README.md` aligned with the shipped API.
 - Keep `UPGRADE.md` aligned with the actual migration surface.
 - Update `CHANGELOG.md` for user-visible changes.
+- Add or maintain executable coverage for important README examples when the public processor or renderer API changes.
 - When breaking APIs intentionally, document the migration path clearly instead of preserving shims.
 
 ## Planning Guidance

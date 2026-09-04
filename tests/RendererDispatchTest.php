@@ -102,6 +102,37 @@ test('assigning a processor replaces a renderer and assigning a renderer replace
         ->and($hooks->render('ReplaceProcessor'))->toBe('firstsecond');
 });
 
+test('shared callable slot behavior matches the invoked API contract', function () {
+    $hooks = new Hooks();
+    $hooks->addCollector('SharedCallableSlot', fn (): string => 'first');
+    $hooks->addCollector('SharedCallableSlot', fn (): string => 'second');
+
+    $hooks->setProcessor('SharedCallableSlot', static function (array $results, ProcessingContext $context): string {
+        expect($context->hookPoint())->toBe('SharedCallableSlot');
+
+        return implode('|', $results);
+    });
+
+    expect($hooks->process('SharedCallableSlot'))->toBe('first|second')
+        ->and($hooks->render('SharedCallableSlot'))->toBe('first|second');
+
+    $hooks->setProcessor('SharedCallableSlot', static fn (array $results, ProcessingContext $context): mixed => ['first', 'second']);
+
+    expect($hooks->process('SharedCallableSlot'))->toBe(['first', 'second'])
+        ->and(fn () => $hooks->render('SharedCallableSlot'))->toThrow(
+            InvalidRendererException::class,
+            'Callable renderer for collector hook point "SharedCallableSlot" must return string, array returned.'
+        );
+
+    $hooks->setRenderer('SharedCallableSlot', static fn (array $results, ProcessingContext $context): mixed => ['joined' => implode(',', $results)]);
+
+    expect($hooks->process('SharedCallableSlot'))->toBe(['joined' => 'first,second'])
+        ->and(fn () => $hooks->render('SharedCallableSlot'))->toThrow(
+            InvalidRendererException::class,
+            'Callable renderer for collector hook point "SharedCallableSlot" must return string, array returned.'
+        );
+});
+
 test('class name renderers resolve through the configured resolver', function () {
     $hooks = new Hooks(new class () implements Resolver {
         public function resolve(string $className): object

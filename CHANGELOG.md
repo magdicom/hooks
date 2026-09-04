@@ -25,6 +25,12 @@ Version 2.0 is intentionally breaking and does not preserve version-1 dispatch o
 - add configurable separator support to `ConcatenateRenderer` while preserving empty-string defaults and null slot positions
 - add PHPStan generics to `ResultProcessor` and `Renderer`, with matching annotations on built-in processors and test doubles
 - add explicit regression coverage and documentation for callable-string versus resolver-backed class-string processor and renderer resolution
+- clarify shared-slot callable processor and renderer behavior, including explicit runtime validation for callable renderer output
+- add automated coverage for key README processor and renderer examples
+- validate the public processor and renderer generics from a consumer PHPStan fixture and document that collector-result compatibility is not yet type-linked by the registry
+- add built-in `FlattenProcessor` support for depth-aware list flattening of array-based collector results
+- add built-in `MergeProcessor` support with standard PHP `array_merge()` semantics for array-based collector results
+- add built-in strict `BooleanAndProcessor` and `BooleanOrProcessor` support for boolean collector requirements
 - make listener mutations during dispatch apply only to the next invocation via explicit snapshots
 - add regression coverage for nested, recursive, and exception-safe execution cleanup
 - expand automated coverage for priority ordering and repeated independent invocations across the new APIs

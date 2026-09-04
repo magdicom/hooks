@@ -4,7 +4,7 @@
 [![Tests](https://github.com/magdicom/hooks/actions/workflows/run-tests.yml/badge.svg?branch=main)](https://github.com/magdicom/hooks/actions/workflows/run-tests.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/magdicom/hooks.svg?style=flat-square)](https://packagist.org/packages/magdicom/hooks)
 
-`magdicom/hooks` is a lightweight, framework-independent hook system for PHP.
+`magdicom/hooks` is a lightweight, framework-independent PHP hooks package with explicit actions, filters, collectors, and collector result processing.
 
 Version `2.0` is an intentionally breaking release. If you are upgrading from `1.x`, read [UPGRADE.md](UPGRADE.md) before migrating code.
 
@@ -13,6 +13,13 @@ The `2.0` branch currently exposes three explicit hook models:
 - actions for side effects
 - filters for sequential value transformation
 - collectors for raw result gathering
+
+Collectors can optionally be finalized with processors or renderers after raw collection:
+
+- actions are synchronous side-effect extension points
+- filters are ordered value transformations
+- collectors gather independent contributions
+- processors and renderers finalize collected contributions
 
 The action and filter terminology is inspired by the WordPress hooks system. This package is independently implemented and is not affiliated with or endorsed by WordPress or the WordPress Foundation.
 
@@ -217,6 +224,9 @@ The public processing types now exist for collector endpoints:
 - `ProcessingContext`
 
 For static analysis, `ResultProcessor` now documents generic raw-result and processed-result templates, and `Renderer` specializes that contract to a string result.
+Custom processors and renderers can use narrower raw-result generics on their own implementations, such as `ResultProcessor<string, string>` or `Renderer<string>`.
+The `Hooks` registry itself is still collector-wide and not endpoint-typed, so `setProcessor()` and `setRenderer()` are documented against broad `list<mixed>` collector results rather than narrow endpoint-specific result types.
+If a project knows a given collector always produces strings, treating a narrower processor as compatible remains the developer's responsibility until a future typed-endpoint design exists.
 
 `ProcessingContext` contains only:
 
@@ -271,6 +281,16 @@ If a class-name processor resolves to an object that does not implement `ResultP
 `process()` runs the configured collector processor and returns its output as-is.
 Exact registration removal still goes through `RegistrationHandle::remove()`. Callback-based `removeAction()`, `removeFilter()`, and `removeCollector()` remain priority-aware callback removal APIs and do not accept registration handles.
 
+Because processors and renderers share one collector slot, callable registrations do not carry hidden renderer metadata:
+
+- a callable assigned through `setProcessor()` can still be used by `render()` if it returns a string
+- a callable assigned through `setProcessor()` causes `render()` to throw `InvalidRendererException` if it returns a non-string value
+- a callable assigned through `setRenderer()` can still be used by `process()`
+- `process()` returns callable output as-is and does not apply renderer-specific string validation
+- `setProcessor()` and `setRenderer()` always replace whatever was previously stored for that collector endpoint
+
+Interface-based instances and resolver-backed class names remain distinguishable: `process()` accepts resolved `ResultProcessor` implementations, while `render()` requires a resolved `Renderer`.
+
 ## Renderers and Built-ins
 
 Renderers are specialized processors that guarantee string output and reuse the same single processor slot:
@@ -286,17 +306,28 @@ If a string is callable in PHP, such as a named function or static method string
 
 Built-ins currently shipped for collector endpoints:
 
+- `Magdicom\Processor\BooleanAndProcessor`
+- `Magdicom\Processor\BooleanOrProcessor`
 - `Magdicom\Processor\ConcatenateRenderer`
+- `Magdicom\Processor\FlattenProcessor`
+- `Magdicom\Processor\MergeProcessor`
 - `Magdicom\Processor\FirstProcessor`
 - `Magdicom\Processor\FirstNonNullProcessor`
 - `Magdicom\Processor\LastProcessor`
 
 `ConcatenateRenderer` accepts an optional separator string. Each raw result is rendered individually using the existing string/scalar/Stringable/null rules, then the rendered entries are joined with that separator. `null` still occupies its original position as an empty rendered entry.
+`FlattenProcessor` requires every top-level collector result to be an array, discards array keys, preserves callback and array iteration order, and returns a flattened list. Use depth `0` to concatenate only the top-level callback arrays, a positive depth to flatten that many nested levels, or `-1` for unlimited flattening.
+`MergeProcessor` also requires array results, but unlike `FlattenProcessor` it keeps normal `array_merge()` semantics: later string keys replace earlier ones, numeric keys are appended and reindexed, and nested arrays are not recursively merged.
+`BooleanAndProcessor` and `BooleanOrProcessor` require strictly boolean collected results. They do not cast with PHP truthiness. Empty results return `true` for AND and `false` for OR.
 
 ```php
 use Magdicom\Hooks;
+use Magdicom\Processor\BooleanAndProcessor;
+use Magdicom\ProcessingContext;
 use Magdicom\Processor\ConcatenateRenderer;
+use Magdicom\Processor\FlattenProcessor;
 use Magdicom\Processor\FirstProcessor;
+use Magdicom\Processor\MergeProcessor;
 
 $hooks = new Hooks();
 
@@ -314,11 +345,21 @@ $hooks->setRenderer('report', static function (array $results, ProcessingContext
 });
 echo $hooks->render('report');
 
+$hooks->setProcessor('navigation', new FlattenProcessor());
+var_dump($hooks->process('navigation'));
+
+$hooks->setProcessor('configuration', new MergeProcessor());
+var_dump($hooks->process('configuration'));
+
+$hooks->setProcessor('requirements', new BooleanAndProcessor());
+var_dump($hooks->process('requirements'));
+
 $hooks->setProcessor('report', new FirstProcessor());
 var_dump($hooks->process('report'));
 ```
 
 `render()` is a string-only convenience for collector endpoints that are configured with a renderer.
+The examples in this section are covered by automated tests so the documented signatures and behaviors stay aligned with the shipped API.
 
 ## Debugging
 
@@ -342,7 +383,6 @@ $hooks->doAction('greeting');
 
 The current branch does not yet implement:
 
-- flattening, merge, and boolean processors
 - framework-specific integrations
 
 ## Upgrading from 1.x
