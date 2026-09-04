@@ -1,12 +1,21 @@
 name: Tests
 
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -14,6 +23,12 @@ jobs:
             stability: prefer-lowest
           - os: ubuntu-latest
             php: "8.2"
+            stability: prefer-stable
+          - os: ubuntu-latest
+            php: "8.3"
+            stability: prefer-stable
+          - os: ubuntu-latest
+            php: "8.4"
             stability: prefer-stable
           - os: ubuntu-latest
             php: "8.5"
@@ -26,7 +41,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -34,6 +49,7 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo
           coverage: none
+          tools: composer:v2
 
       - name: Setup problem matchers
         run: |

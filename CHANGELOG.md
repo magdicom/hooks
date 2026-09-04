@@ -31,10 +31,14 @@ Version 2.0 is intentionally breaking and does not preserve version-1 dispatch o
 - add built-in `FlattenProcessor` support for depth-aware list flattening of array-based collector results
 - add built-in `MergeProcessor` support with standard PHP `array_merge()` semantics for array-based collector results
 - add built-in strict `BooleanAndProcessor` and `BooleanOrProcessor` support for boolean collector requirements
+- add explicit regression coverage for `collect()` bypassing configured renderers and for `process()` using a configured renderer through the shared slot
+- clarify that built-in processors and renderers validate their accepted raw result shapes at runtime while the shared collector registry remains broadly typed
+- improve package metadata and discoverability with version-2 positioning, richer Composer keywords, and support links
 - make listener mutations during dispatch apply only to the next invocation via explicit snapshots
 - add regression coverage for nested, recursive, and exception-safe execution cleanup
 - expand automated coverage for priority ordering and repeated independent invocations across the new APIs
 - document the collector-only processor and renderer model, including migration guidance for `collect()`, `process()`, and `render()`
+- harden GitHub Actions by replacing formatting auto-commits with check-only validation, expanding the PHP matrix, adding strict Composer validation, and removing the post-release changelog auto-commit workflow
 
 ## v1.0.5 - 2022-01-12
 

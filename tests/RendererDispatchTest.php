@@ -21,6 +21,16 @@ test('renderer configuration reuses the processor slot', function () {
         ->and($hooks->processor('RenderSlot'))->toBe($renderer);
 });
 
+test('collect bypasses a configured renderer and keeps raw collector results', function () {
+    $hooks = new Hooks();
+    $hooks->addCollector('CollectRendererRaw', fn (): string => 'first');
+    $hooks->addCollector('CollectRendererRaw', fn (): string => 'second');
+    $hooks->setRenderer('CollectRendererRaw', new ConcatenateRenderer('|'));
+
+    expect($hooks->collect('CollectRendererRaw'))->toBe(['first', 'second'])
+        ->and($hooks->render('CollectRendererRaw'))->toBe('first|second');
+});
+
 test('render requires a configured renderer instance', function () {
     $hooks = new Hooks();
     $hooks->addCollector('RenderMissing', fn (): string => 'value');
@@ -154,6 +164,16 @@ test('class name renderers resolve through the configured resolver', function ()
     $hooks->setRenderer('ResolverRenderer', ConcatenateRenderer::class);
 
     expect($hooks->render('ResolverRenderer'))->toBe('ResolverRenderer:left|right');
+});
+
+test('process can use a configured renderer class through the shared processor slot', function () {
+    $hooks = new Hooks();
+    $hooks->addCollector('RendererSharedProcess', fn (): string => 'left');
+    $hooks->addCollector('RendererSharedProcess', fn (): string => 'right');
+    $hooks->setRenderer('RendererSharedProcess', ConcatenateRenderer::class);
+
+    expect($hooks->process('RendererSharedProcess'))->toBe('leftright')
+        ->and($hooks->render('RendererSharedProcess'))->toBe('leftright');
 });
 
 test('renderer callable strings execute directly while non-callable strings resolve through the resolver', function () {

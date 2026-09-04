@@ -4,7 +4,7 @@
 [![Tests](https://github.com/magdicom/hooks/actions/workflows/run-tests.yml/badge.svg?branch=main)](https://github.com/magdicom/hooks/actions/workflows/run-tests.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/magdicom/hooks.svg?style=flat-square)](https://packagist.org/packages/magdicom/hooks)
 
-`magdicom/hooks` is a lightweight, framework-independent PHP hooks package with explicit actions, filters, collectors, and collector result processing.
+`magdicom/hooks` is a lightweight, framework-independent PHP hooks package with actions, filters, collectors, processors, and renderers.
 
 Version `2.0` is an intentionally breaking release. If you are upgrading from `1.x`, read [UPGRADE.md](UPGRADE.md) before migrating code.
 
@@ -86,6 +86,8 @@ var_dump($hooks->collect('report'));
 
 All registration APIs return a `RegistrationHandle`.
 If no priority is provided, the default is `10`.
+Each handle belongs only to the exact `Hooks` instance that created it.
+Repeated callback-based or handle-based removals are deterministic: once the matching registration is gone, later removals return `false`.
 
 ```php
 use Magdicom\Hooks;
@@ -278,6 +280,7 @@ If no processor is configured for a collector endpoint, `process()` throws `Miss
 If a class-name processor resolves to an object that does not implement `ResultProcessor`, `process()` throws `InvalidProcessorException`.
 
 `collect()` always bypasses processors and returns raw one-entry-per-callback results.
+That raw bypass still applies when the endpoint currently has a renderer in the shared processor slot.
 `process()` runs the configured collector processor and returns its output as-is.
 Exact registration removal still goes through `RegistrationHandle::remove()`. Callback-based `removeAction()`, `removeFilter()`, and `removeCollector()` remain priority-aware callback removal APIs and do not accept registration handles.
 
@@ -319,6 +322,7 @@ Built-ins currently shipped for collector endpoints:
 `FlattenProcessor` requires every top-level collector result to be an array, discards array keys, preserves callback and array iteration order, and returns a flattened list. Use depth `0` to concatenate only the top-level callback arrays, a positive depth to flatten that many nested levels, or `-1` for unlimited flattening.
 `MergeProcessor` also requires array results, but unlike `FlattenProcessor` it keeps normal `array_merge()` semantics: later string keys replace earlier ones, numeric keys are appended and reindexed, and nested arrays are not recursively merged.
 `BooleanAndProcessor` and `BooleanOrProcessor` require strictly boolean collected results. They do not cast with PHP truthiness. Empty results return `true` for AND and `false` for OR.
+The built-ins validate those raw result shapes at runtime, while the untyped collector registry still leaves endpoint-to-processor compatibility as a developer responsibility.
 
 ```php
 use Magdicom\Hooks;

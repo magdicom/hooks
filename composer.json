@@ -1,11 +1,21 @@
 {
     "name": "magdicom/hooks",
-    "description": "A lightweight, framework-independent PHP hooks package with explicit actions, filters, collectors, and collector result processing.",
+    "description": "A lightweight, framework-independent PHP hooks package with actions, filters, collectors, processors, and renderers.",
     "keywords": [
+        "actions",
+        "collectors",
+        "extensibility",
+        "filters",
+        "hooks",
         "magdicom",
-        "hooks"
+        "php",
+        "renderers"
     ],
     "homepage": "https://github.com/magdicom/hooks",
+    "support": {
+        "issues": "https://github.com/magdicom/hooks/issues",
+        "source": "https://github.com/magdicom/hooks"
+    },
     "license": "MIT",
     "authors": [
         {

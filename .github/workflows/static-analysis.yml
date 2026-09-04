@@ -1,23 +1,50 @@
 name: Static Analysis
 
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: static-analysis-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  phpstan:
+  validate:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
           coverage: none
+          tools: composer:v2
+
+      - name: Validate composer metadata
+        run: composer validate --strict
+
+  phpstan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+          tools: composer:v2
 
       - name: Install dependencies
-        run: composer update --prefer-stable --prefer-dist --no-interaction
+        run: composer install --prefer-dist --no-interaction
 
       - name: Run PHPStan
         run: composer analyse

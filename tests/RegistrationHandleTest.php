@@ -95,6 +95,22 @@ test('typed callback removal is priority-aware and handle removal stays exact', 
         ->and($hooks->has('RemoveBy'))->toBeFalse();
 });
 
+test('callback-based removals return false once the matching registration is already gone', function () {
+    $hooks = new Hooks();
+    $callback = fn (): string => 'value';
+
+    $hooks->addAction('RepeatRemovalAction', $callback, 10);
+    $hooks->addFilter('RepeatRemovalFilter', $callback, 10);
+    $hooks->addCollector('RepeatRemovalCollector', $callback, 10);
+
+    expect($hooks->removeAction('RepeatRemovalAction', $callback, 10))->toBeTrue()
+        ->and($hooks->removeAction('RepeatRemovalAction', $callback, 10))->toBeFalse()
+        ->and($hooks->removeFilter('RepeatRemovalFilter', $callback, 10))->toBeTrue()
+        ->and($hooks->removeFilter('RepeatRemovalFilter', $callback, 10))->toBeFalse()
+        ->and($hooks->removeCollector('RepeatRemovalCollector', $callback, 10))->toBeTrue()
+        ->and($hooks->removeCollector('RepeatRemovalCollector', $callback, 10))->toBeFalse();
+});
+
 test('handles from another hooks instance never match local registrations', function () {
     $firstHooks = new Hooks();
     $secondHooks = new Hooks();
@@ -107,6 +123,7 @@ test('handles from another hooks instance never match local registrations', func
         ->and($secondHooks->collect('Shared'))->toBe(['local'])
         ->and($foreignHandle->remove())->toBeTrue()
         ->and($secondHooks->collect('Shared'))->toBe(['local'])
+        ->and($foreignHandle->remove())->toBeFalse()
         ->and($firstHooks->collect('Shared'))->toBe([]);
 });
 
