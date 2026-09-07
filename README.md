@@ -1,7 +1,7 @@
 # PHP Hooks
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/magdicom/hooks.svg?style=flat-square)](https://packagist.org/packages/magdicom/hooks)
-[![Tests](https://github.com/magdicom/hooks/actions/workflows/run-tests.yml/badge.svg?branch=main)](https://github.com/magdicom/hooks/actions/workflows/run-tests.yml)
+[![Tests](https://github.com/magdicom/hooks/actions/workflows/run-tests.yml/badge.svg?branch=2.0)](https://github.com/magdicom/hooks/actions/workflows/run-tests.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/magdicom/hooks.svg?style=flat-square)](https://packagist.org/packages/magdicom/hooks)
 
 `magdicom/hooks` is a lightweight, framework-independent PHP hooks package with actions, filters, collectors, processors, and renderers.
@@ -28,8 +28,10 @@ The action and filter terminology is inspired by the WordPress hooks system. Thi
 This package currently targets PHP `8.2` or newer.
 
 ```bash
-composer require magdicom/hooks
+composer require magdicom/hooks:"^2.0@beta"
 ```
+
+The explicit beta constraint is required while version 2 is a prerelease; the command will be simplified after stable `2.0.0` is published.
 
 ## Quick Start
 

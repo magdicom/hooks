@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-Version 2.0 is intentionally breaking and does not preserve version-1 dispatch or output APIs.
+## v2.0.0-beta.1 - 2026-09-07
+
+Version 2.0 is intentionally breaking and does not preserve version-1 dispatch, global parameter, or output APIs.
 
 - raise the package minimum PHP version to 8.2 for the upcoming 2.0 line
 - upgrade development tooling to Pest 3, PHP CS Fixer 3.95, and PHPStan 2
