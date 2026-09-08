@@ -1,8 +1,8 @@
 <?php
 
 use Magdicom\Hooks;
-use Magdicom\NativeResolver;
 use Magdicom\Resolver;
+use Magdicom\Resolvers\NativeResolver;
 
 test('default construction uses the native resolver for class callbacks', function () {
     $hooks = new Hooks();

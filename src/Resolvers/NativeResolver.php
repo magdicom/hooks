@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Magdicom;
+namespace Magdicom\Resolvers;
+
+use Magdicom\Resolver;
 
 class NativeResolver implements Resolver
 {

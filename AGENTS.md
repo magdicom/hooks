@@ -16,6 +16,9 @@ The package should stay small, explicit, and free of framework coupling.
 
 - `src/Hooks.php`: core runtime and public API surface.
 - `src/RegistrationHandle.php`: registration removal handle.
+- `src/Exceptions/`: package-specific processor and renderer exceptions.
+- `src/Processors/`: built-in collector processors and renderers.
+- `src/Resolvers/`: concrete resolver implementations.
 - `tests/*.php`: Pest coverage for callbacks, ordering, inspection, and dispatch safety.
 - `composer.json`: package metadata, scripts, and toolchain.
 - `README.md`: user-facing API documentation.
@@ -79,7 +82,9 @@ Treat these methods on `Magdicom\Hooks` as the supported public surface unless t
 - `setSourceFile`
 - `getSourceFile`
 
-Treat `Magdicom\RegistrationHandle`, `Magdicom\Resolver`, `Magdicom\NativeResolver`, `Magdicom\ProcessingContext`, `Magdicom\ResultProcessor`, `Magdicom\Renderer`, `Magdicom\MissingProcessorException`, `Magdicom\MissingRendererException`, `Magdicom\InvalidProcessorException`, `Magdicom\InvalidRendererException`, and the built-ins under `Magdicom\Processor\` as public as well.
+Treat `Magdicom\RegistrationHandle`, `Magdicom\Resolver`, `Magdicom\Resolvers\NativeResolver`, `Magdicom\ProcessingContext`, `Magdicom\ResultProcessor`, `Magdicom\Renderer`, `Magdicom\Exceptions\MissingProcessorException`, `Magdicom\Exceptions\MissingRendererException`, `Magdicom\Exceptions\InvalidProcessorException`, `Magdicom\Exceptions\InvalidRendererException`, and the built-ins under `Magdicom\Processors\` as public as well.
+
+The version-2 beta namespace cleanup intentionally moved built-ins and exceptions before stable 2.0. Do not add aliases or compatibility shims for the old beta namespaces.
 
 Callback-specific `hasAction`, `hasFilter`, `hasCollector`, `removeAction`, `removeFilter`, and `removeCollector` are priority-aware. Exact registration removal should go through `RegistrationHandle::remove()`.
 

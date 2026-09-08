@@ -2,7 +2,7 @@
 
 use Magdicom\Hooks;
 use Magdicom\ProcessingContext;
-use Magdicom\Processor\MergeProcessor;
+use Magdicom\Processors\MergeProcessor;
 
 test('merge processor returns an empty array for empty results', function () {
     expect((new MergeProcessor())->process([], new ProcessingContext('MergeEmpty')))

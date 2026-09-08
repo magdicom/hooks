@@ -2,31 +2,31 @@
 
 declare(strict_types=1);
 
-namespace Magdicom\Processor;
+namespace Magdicom\Processors;
 
 use Magdicom\ProcessingContext;
 use Magdicom\ResultProcessor;
 use UnexpectedValueException;
 
 /** @implements ResultProcessor<mixed, bool> */
-class BooleanOrProcessor implements ResultProcessor
+class BooleanAndProcessor implements ResultProcessor
 {
     public function process(array $results, ProcessingContext $context): mixed
     {
         foreach ($results as $index => $result) {
             if (! is_bool($result)) {
                 throw new UnexpectedValueException(sprintf(
-                    'BooleanOrProcessor expects boolean results; result at index %d is %s.',
+                    'BooleanAndProcessor expects boolean results; result at index %d is %s.',
                     $index,
                     get_debug_type($result)
                 ));
             }
 
-            if ($result === true) {
-                return true;
+            if ($result === false) {
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 }

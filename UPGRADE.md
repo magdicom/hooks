@@ -35,6 +35,26 @@ $results = $hooks->collect('menu');
 - If collected output needs post-processing, configure a collector processor and call `process()`.
 - If collected output needs string rendering, configure a collector renderer and call `render()`.
 
+## Beta-to-Beta Namespace Changes
+
+These namespace changes were made before stable 2.0 to establish a clean long-term package structure. They are not version-1 compatibility work, and no aliases or compatibility shims are provided.
+
+| Before | After |
+| --- | --- |
+| `Magdicom\Processor\BooleanAndProcessor` | `Magdicom\Processors\BooleanAndProcessor` |
+| `Magdicom\Processor\BooleanOrProcessor` | `Magdicom\Processors\BooleanOrProcessor` |
+| `Magdicom\Processor\ConcatenateRenderer` | `Magdicom\Processors\ConcatenateRenderer` |
+| `Magdicom\Processor\FirstNonNullProcessor` | `Magdicom\Processors\FirstNonNullProcessor` |
+| `Magdicom\Processor\FirstProcessor` | `Magdicom\Processors\FirstProcessor` |
+| `Magdicom\Processor\FlattenProcessor` | `Magdicom\Processors\FlattenProcessor` |
+| `Magdicom\Processor\LastProcessor` | `Magdicom\Processors\LastProcessor` |
+| `Magdicom\Processor\MergeProcessor` | `Magdicom\Processors\MergeProcessor` |
+| `Magdicom\InvalidProcessorException` | `Magdicom\Exceptions\InvalidProcessorException` |
+| `Magdicom\InvalidRendererException` | `Magdicom\Exceptions\InvalidRendererException` |
+| `Magdicom\MissingProcessorException` | `Magdicom\Exceptions\MissingProcessorException` |
+| `Magdicom\MissingRendererException` | `Magdicom\Exceptions\MissingRendererException` |
+| `Magdicom\NativeResolver` | `Magdicom\Resolvers\NativeResolver` |
+
 ## Signature Changes
 
 Version 2 dispatch uses natural variadic arguments:
@@ -69,10 +89,10 @@ These version-1 APIs are no longer available in 2.0:
 - Filters return the original input when no listeners are registered.
 - Collectors return `[]` when no listeners are registered.
 - `collect()` always returns raw one-entry-per-callback results, even when a processor or renderer is configured.
-- `process()` throws `MissingProcessorException` when no collector processor is configured.
-- `render()` throws `MissingRendererException` when no collector renderer is configured.
+- `process()` throws `Magdicom\Exceptions\MissingProcessorException` when no collector processor is configured.
+- `render()` throws `Magdicom\Exceptions\MissingRendererException` when no collector renderer is configured.
 - `setProcessor()` and `setRenderer()` replace the same collector processing slot.
-- `render()` throws `InvalidRendererException` when the shared slot contains a non-renderer processor, a resolved class of the wrong type, or a callable that returns a non-string value.
+- `render()` throws `Magdicom\Exceptions\InvalidRendererException` when the shared slot contains a non-renderer processor, a resolved class of the wrong type, or a callable that returns a non-string value.
 - Equal-priority listeners keep registration order.
 - Registrations added or removed during dispatch affect only later invocations.
 
@@ -82,7 +102,7 @@ If a version-1 integration depended on collecting values and then converting the
 
 ```php
 use Magdicom\Hooks;
-use Magdicom\Processor\ConcatenateRenderer;
+use Magdicom\Processors\ConcatenateRenderer;
 
 $hooks = new Hooks();
 
@@ -95,5 +115,5 @@ $hooks->setRenderer('menu', new ConcatenateRenderer());
 $html = $hooks->render('menu');
 ```
 
-Class-name processors and renderers resolve through the framework-neutral `Resolver` abstraction. `new Hooks()` uses `NativeResolver` automatically, and a framework wrapper can swap in its own resolver implementation later.
+Class-name processors and renderers resolve through the framework-neutral `Resolver` abstraction. `new Hooks()` uses `Magdicom\Resolvers\NativeResolver` automatically, and a framework wrapper can swap in its own resolver implementation later.
 Callable processors and renderers follow the invoked method contract of the shared slot: `process()` returns callable output as-is, while `render()` validates callable output as a string.

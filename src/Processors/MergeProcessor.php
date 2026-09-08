@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Magdicom\Processor;
+namespace Magdicom\Processors;
 
 use Magdicom\ProcessingContext;
 use Magdicom\ResultProcessor;

@@ -1,13 +1,13 @@
 <?php
 
+use Magdicom\Exceptions\InvalidRendererException;
+use Magdicom\Exceptions\MissingRendererException;
 use Magdicom\Hooks;
-use Magdicom\InvalidRendererException;
-use Magdicom\MissingRendererException;
 use Magdicom\ProcessingContext;
-use Magdicom\Processor\ConcatenateRenderer;
-use Magdicom\Processor\FirstNonNullProcessor;
-use Magdicom\Processor\FirstProcessor;
-use Magdicom\Processor\LastProcessor;
+use Magdicom\Processors\ConcatenateRenderer;
+use Magdicom\Processors\FirstNonNullProcessor;
+use Magdicom\Processors\FirstProcessor;
+use Magdicom\Processors\LastProcessor;
 use Magdicom\Renderer;
 use Magdicom\Resolver;
 

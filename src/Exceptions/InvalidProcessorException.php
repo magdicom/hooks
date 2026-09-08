@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Magdicom;
+namespace Magdicom\Exceptions;
 
+use Magdicom\ResultProcessor;
 use RuntimeException;
 
 class InvalidProcessorException extends RuntimeException

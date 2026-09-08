@@ -2,11 +2,11 @@
 
 use Magdicom\Hooks;
 use Magdicom\ProcessingContext;
-use Magdicom\Processor\BooleanAndProcessor;
-use Magdicom\Processor\ConcatenateRenderer;
-use Magdicom\Processor\FirstProcessor;
-use Magdicom\Processor\FlattenProcessor;
-use Magdicom\Processor\MergeProcessor;
+use Magdicom\Processors\BooleanAndProcessor;
+use Magdicom\Processors\ConcatenateRenderer;
+use Magdicom\Processors\FirstProcessor;
+use Magdicom\Processors\FlattenProcessor;
+use Magdicom\Processors\MergeProcessor;
 
 test('README processor example stays valid', function () {
     $hooks = new Hooks();

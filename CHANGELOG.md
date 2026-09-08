@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- move package exceptions to `Magdicom\Exceptions`, built-in processors and renderers to `Magdicom\Processors`, and `NativeResolver` to `Magdicom\Resolvers` before stable 2.0
+- add architecture regression coverage for PSR-4 namespace/path alignment, public class autoloadability, and removal of obsolete beta namespace references
+
 ## v2.0.0-beta.1 - 2026-09-07
 
 Version 2.0 is intentionally breaking and does not preserve version-1 dispatch, global parameter, or output APIs.

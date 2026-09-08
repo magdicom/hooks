@@ -2,7 +2,7 @@
 
 use Magdicom\Hooks;
 use Magdicom\ProcessingContext;
-use Magdicom\Processor\FlattenProcessor;
+use Magdicom\Processors\FlattenProcessor;
 
 test('flatten processor returns an empty list for empty results', function () {
     expect((new FlattenProcessor())->process([], new ProcessingContext('FlattenEmpty')))

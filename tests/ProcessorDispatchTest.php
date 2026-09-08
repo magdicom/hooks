@@ -1,8 +1,8 @@
 <?php
 
+use Magdicom\Exceptions\InvalidProcessorException;
+use Magdicom\Exceptions\MissingProcessorException;
 use Magdicom\Hooks;
-use Magdicom\InvalidProcessorException;
-use Magdicom\MissingProcessorException;
 use Magdicom\ProcessingContext;
 use Magdicom\Resolver;
 use Magdicom\ResultProcessor;

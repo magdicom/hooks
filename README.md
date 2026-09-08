@@ -6,7 +6,7 @@
 
 `magdicom/hooks` is a lightweight, framework-independent PHP hooks package with actions, filters, collectors, processors, and renderers.
 
-Version `2.0` is an intentionally breaking release. If you are upgrading from `1.x`, read [UPGRADE.md](UPGRADE.md) before migrating code.
+Version `2.0` is an intentionally breaking release. If you are upgrading from `1.x` or an earlier `2.0` beta, read [UPGRADE.md](UPGRADE.md) before migrating code.
 
 The `2.0` branch currently exposes three explicit hook models:
 
@@ -204,7 +204,7 @@ If a class name and non-static method are provided, the callback is resolved thr
 
 ```php
 use Magdicom\Hooks;
-use Magdicom\NativeResolver;
+use Magdicom\Resolvers\NativeResolver;
 
 $hooks = new Hooks(new NativeResolver());
 ```
@@ -278,8 +278,8 @@ var_dump($hooks->collect('report'));
 echo $hooks->process('report');
 ```
 
-If no processor is configured for a collector endpoint, `process()` throws `MissingProcessorException`.
-If a class-name processor resolves to an object that does not implement `ResultProcessor`, `process()` throws `InvalidProcessorException`.
+If no processor is configured for a collector endpoint, `process()` throws `Magdicom\Exceptions\MissingProcessorException`.
+If a class-name processor resolves to an object that does not implement `ResultProcessor`, `process()` throws `Magdicom\Exceptions\InvalidProcessorException`.
 
 `collect()` always bypasses processors and returns raw one-entry-per-callback results.
 That raw bypass still applies when the endpoint currently has a renderer in the shared processor slot.
@@ -289,7 +289,7 @@ Exact registration removal still goes through `RegistrationHandle::remove()`. Ca
 Because processors and renderers share one collector slot, callable registrations do not carry hidden renderer metadata:
 
 - a callable assigned through `setProcessor()` can still be used by `render()` if it returns a string
-- a callable assigned through `setProcessor()` causes `render()` to throw `InvalidRendererException` if it returns a non-string value
+- a callable assigned through `setProcessor()` causes `render()` to throw `Magdicom\Exceptions\InvalidRendererException` if it returns a non-string value
 - a callable assigned through `setRenderer()` can still be used by `process()`
 - `process()` returns callable output as-is and does not apply renderer-specific string validation
 - `setProcessor()` and `setRenderer()` always replace whatever was previously stored for that collector endpoint
@@ -303,22 +303,22 @@ Renderers are specialized processors that guarantee string output and reuse the 
 - `setRenderer(string $hookName, Renderer|callable|string $renderer): self`
 - `render(string $hookName, mixed ...$arguments): string`
 
-`render()` requires the configured processor to be a renderer. If no renderer is configured, it throws `MissingRendererException`.
-If a collector endpoint is configured with a non-renderer processor, a class-name renderer resolves to the wrong type, or a callable renderer returns a non-string value, `render()` throws `InvalidRendererException`.
+`render()` requires the configured processor to be a renderer. If no renderer is configured, it throws `Magdicom\Exceptions\MissingRendererException`.
+If a collector endpoint is configured with a non-renderer processor, a class-name renderer resolves to the wrong type, or a callable renderer returns a non-string value, `render()` throws `Magdicom\Exceptions\InvalidRendererException`.
 
 Callable renderers must accept `(array $results, ProcessingContext $context): string`.
 If a string is callable in PHP, such as a named function or static method string, it is executed directly as a renderer. Non-callable strings are treated as class names and resolved through `Resolver`.
 
 Built-ins currently shipped for collector endpoints:
 
-- `Magdicom\Processor\BooleanAndProcessor`
-- `Magdicom\Processor\BooleanOrProcessor`
-- `Magdicom\Processor\ConcatenateRenderer`
-- `Magdicom\Processor\FlattenProcessor`
-- `Magdicom\Processor\MergeProcessor`
-- `Magdicom\Processor\FirstProcessor`
-- `Magdicom\Processor\FirstNonNullProcessor`
-- `Magdicom\Processor\LastProcessor`
+- `Magdicom\Processors\BooleanAndProcessor`
+- `Magdicom\Processors\BooleanOrProcessor`
+- `Magdicom\Processors\ConcatenateRenderer`
+- `Magdicom\Processors\FlattenProcessor`
+- `Magdicom\Processors\MergeProcessor`
+- `Magdicom\Processors\FirstProcessor`
+- `Magdicom\Processors\FirstNonNullProcessor`
+- `Magdicom\Processors\LastProcessor`
 
 `ConcatenateRenderer` accepts an optional separator string. Each raw result is rendered individually using the existing string/scalar/Stringable/null rules, then the rendered entries are joined with that separator. `null` still occupies its original position as an empty rendered entry.
 `FlattenProcessor` requires every top-level collector result to be an array, discards array keys, preserves callback and array iteration order, and returns a flattened list. Use depth `0` to concatenate only the top-level callback arrays, a positive depth to flatten that many nested levels, or `-1` for unlimited flattening.
@@ -328,12 +328,12 @@ The built-ins validate those raw result shapes at runtime, while the untyped col
 
 ```php
 use Magdicom\Hooks;
-use Magdicom\Processor\BooleanAndProcessor;
+use Magdicom\Processors\BooleanAndProcessor;
 use Magdicom\ProcessingContext;
-use Magdicom\Processor\ConcatenateRenderer;
-use Magdicom\Processor\FlattenProcessor;
-use Magdicom\Processor\FirstProcessor;
-use Magdicom\Processor\MergeProcessor;
+use Magdicom\Processors\ConcatenateRenderer;
+use Magdicom\Processors\FlattenProcessor;
+use Magdicom\Processors\FirstProcessor;
+use Magdicom\Processors\MergeProcessor;
 
 $hooks = new Hooks();
 

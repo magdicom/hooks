@@ -2,8 +2,8 @@
 
 use Magdicom\Hooks;
 use Magdicom\ProcessingContext;
-use Magdicom\Processor\ConcatenateRenderer;
-use Magdicom\Processor\FirstProcessor;
+use Magdicom\Processors\ConcatenateRenderer;
+use Magdicom\Processors\FirstProcessor;
 
 test('collector callbacks can nest collect process and render safely', function () {
     $hooks = new Hooks();

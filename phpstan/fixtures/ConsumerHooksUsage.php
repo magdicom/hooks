@@ -6,12 +6,12 @@ namespace Magdicom\PhpStanFixtures;
 
 use Magdicom\Hooks;
 use Magdicom\ProcessingContext;
-use Magdicom\Processor\BooleanAndProcessor;
-use Magdicom\Processor\BooleanOrProcessor;
-use Magdicom\Processor\ConcatenateRenderer;
-use Magdicom\Processor\FlattenProcessor;
-use Magdicom\Processor\FirstProcessor;
-use Magdicom\Processor\MergeProcessor;
+use Magdicom\Processors\BooleanAndProcessor;
+use Magdicom\Processors\BooleanOrProcessor;
+use Magdicom\Processors\ConcatenateRenderer;
+use Magdicom\Processors\FlattenProcessor;
+use Magdicom\Processors\FirstProcessor;
+use Magdicom\Processors\MergeProcessor;
 use Magdicom\Renderer;
 use Magdicom\ResultProcessor;
 

@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace Magdicom;
 
+use Magdicom\Exceptions\InvalidProcessorException;
+use Magdicom\Exceptions\InvalidRendererException;
+use Magdicom\Exceptions\MissingProcessorException;
+use Magdicom\Exceptions\MissingRendererException;
+use Magdicom\Resolvers\NativeResolver;
+
 /**
  * @phpstan-type HookCallbackArray array{0: object|string, 1: string}
  * @phpstan-type HookCallable callable(mixed...): mixed
@@ -88,8 +94,6 @@ class Hooks
         return $this->registerListener('collector', $hookPoint, $callback, $priority);
     }
 
-    /**
-     */
     public function doAction(string $hookPoint, mixed ...$arguments): void
     {
         foreach ($this->snapshotListeners('action', $hookPoint) as $listener) {

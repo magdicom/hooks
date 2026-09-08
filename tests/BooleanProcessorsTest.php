@@ -2,8 +2,8 @@
 
 use Magdicom\Hooks;
 use Magdicom\ProcessingContext;
-use Magdicom\Processor\BooleanAndProcessor;
-use Magdicom\Processor\BooleanOrProcessor;
+use Magdicom\Processors\BooleanAndProcessor;
+use Magdicom\Processors\BooleanOrProcessor;
 
 test('boolean and processor uses logical identity for empty results', function () {
     expect((new BooleanAndProcessor())->process([], new ProcessingContext('AndEmpty')))

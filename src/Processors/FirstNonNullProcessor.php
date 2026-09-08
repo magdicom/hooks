@@ -2,20 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Magdicom\Processor;
+namespace Magdicom\Processors;
 
 use Magdicom\ProcessingContext;
 use Magdicom\ResultProcessor;
 
 /** @implements ResultProcessor<mixed, mixed> */
-class LastProcessor implements ResultProcessor
+class FirstNonNullProcessor implements ResultProcessor
 {
     public function process(array $results, ProcessingContext $context): mixed
     {
-        if ($results === []) {
-            return null;
+        foreach ($results as $result) {
+            if ($result !== null) {
+                return $result;
+            }
         }
 
-        return $results[array_key_last($results)];
+        return null;
     }
 }
