@@ -67,6 +67,55 @@ test('all public classes and interfaces are autoloadable from their stable names
     }
 });
 
+test('hooks exposes the expected public methods without processor-specific shortcuts', function () {
+    $methods = get_class_methods(Hooks::class);
+
+    expect($methods)->toContain(
+        'addAction',
+        'doAction',
+        'addFilter',
+        'applyFilters',
+        'addCollector',
+        'collect',
+        'setProcessor',
+        'hasProcessor',
+        'processor',
+        'clearProcessor',
+        'process',
+        'processWith',
+        'setRenderer',
+        'render',
+        'renderWith',
+        'has',
+        'hasAction',
+        'hasFilter',
+        'hasCollector',
+        'count',
+        'listeners',
+        'actions',
+        'filters',
+        'collectors',
+        'removeAction',
+        'removeFilter',
+        'removeCollector',
+        'removeAll',
+        'removeAllActions',
+        'removeAllFilters',
+        'removeAllCollectors',
+        'debug',
+        'setSourceFile',
+        'getSourceFile',
+    )
+        ->and($methods)->not->toContain('first')
+        ->and($methods)->not->toContain('last')
+        ->and($methods)->not->toContain('firstNonNull')
+        ->and($methods)->not->toContain('flatten')
+        ->and($methods)->not->toContain('merge')
+        ->and($methods)->not->toContain('booleanAnd')
+        ->and($methods)->not->toContain('booleanOr')
+        ->and($methods)->not->toContain('concatenate');
+});
+
 test('old beta namespaces are not retained through aliases or shims', function () {
     $oldTypes = [
         'Magdicom\\NativeResolver',

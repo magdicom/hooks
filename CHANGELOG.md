@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- add one-off collector finalization through `processWith()` and `renderWith()` without mutating persistent processor or renderer configuration
 - move package exceptions to `Magdicom\Exceptions`, built-in processors and renderers to `Magdicom\Processors`, and `NativeResolver` to `Magdicom\Resolvers` before stable 2.0
 - add architecture regression coverage for PSR-4 namespace/path alignment, public class autoloadability, and removal of obsolete beta namespace references
 

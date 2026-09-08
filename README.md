@@ -248,6 +248,7 @@ Collector endpoints can now keep raw `collect()` access while also exposing proc
 - `processor(string $hookName): ResultProcessor|callable|string|null`
 - `clearProcessor(string $hookName): bool`
 - `process(string $hookName, mixed ...$arguments): mixed`
+- `processWith(string $hookName, ResultProcessor|callable|string $processor, mixed ...$arguments): mixed`
 
 `processor()` returns the configured processor reference exactly as stored:
 
@@ -286,6 +287,40 @@ That raw bypass still applies when the endpoint currently has a renderer in the 
 `process()` runs the configured collector processor and returns its output as-is.
 Exact registration removal still goes through `RegistrationHandle::remove()`. Callback-based `removeAction()`, `removeFilter()`, and `removeCollector()` remain priority-aware callback removal APIs and do not accept registration handles.
 
+Use persistent processing when a collector hook point has one normal interpretation:
+
+```php
+use Magdicom\Hooks;
+use Magdicom\Processors\FirstNonNullProcessor;
+
+$hooks = new Hooks();
+
+$hooks->addCollector('customer.email_candidates', fn (Customer $customer): ?string => $customer->primaryEmail);
+$hooks->addCollector('customer.email_candidates', fn (Customer $customer): ?string => $customer->billingEmail);
+
+$hooks->setProcessor(
+    'customer.email_candidates',
+    FirstNonNullProcessor::class,
+);
+
+$email = $hooks->process(
+    'customer.email_candidates',
+    $customer,
+);
+```
+
+Use one-off processing when the caller needs to select the output strategy. The supplied processor is used for that call only; it is not stored and does not replace any configured processor or renderer.
+
+```php
+use Magdicom\Processors\FirstNonNullProcessor;
+
+$email = $hooks->processWith(
+    'customer.email_candidates',
+    FirstNonNullProcessor::class,
+    $customer,
+);
+```
+
 Because processors and renderers share one collector slot, callable registrations do not carry hidden renderer metadata:
 
 - a callable assigned through `setProcessor()` can still be used by `render()` if it returns a string
@@ -302,12 +337,44 @@ Renderers are specialized processors that guarantee string output and reuse the 
 
 - `setRenderer(string $hookName, Renderer|callable|string $renderer): self`
 - `render(string $hookName, mixed ...$arguments): string`
+- `renderWith(string $hookName, Renderer|callable|string $renderer, mixed ...$arguments): string`
 
 `render()` requires the configured processor to be a renderer. If no renderer is configured, it throws `Magdicom\Exceptions\MissingRendererException`.
 If a collector endpoint is configured with a non-renderer processor, a class-name renderer resolves to the wrong type, or a callable renderer returns a non-string value, `render()` throws `Magdicom\Exceptions\InvalidRendererException`.
 
 Callable renderers must accept `(array $results, ProcessingContext $context): string`.
 If a string is callable in PHP, such as a named function or static method string, it is executed directly as a renderer. Non-callable strings are treated as class names and resolved through `Resolver`.
+
+One-off rendering is useful when the caller needs a specific representation without changing the hook point's configured renderer:
+
+```php
+use Magdicom\Hooks;
+use Magdicom\ProcessingContext;
+use Magdicom\Renderer;
+
+/** @implements Renderer<ReceiptSection> */
+final class OrderReceiptRenderer implements Renderer
+{
+    public function process(array $results, ProcessingContext $context): string
+    {
+        return implode('', array_map(
+            static fn (ReceiptSection $section): string => '<section>' . htmlspecialchars($section->html) . '</section>',
+            $results,
+        ));
+    }
+}
+
+$hooks = new Hooks();
+
+$hooks->addCollector('order.receipt.sections', fn (Order $order): ReceiptSection => $order->summarySection());
+$hooks->addCollector('order.receipt.sections', fn (Order $order): ReceiptSection => $order->paymentSection());
+
+$html = $hooks->renderWith(
+    'order.receipt.sections',
+    OrderReceiptRenderer::class,
+    $order,
+);
+```
 
 Built-ins currently shipped for collector endpoints:
 

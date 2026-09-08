@@ -27,10 +27,16 @@ final class ConsumerHooksUsage
         $hooks->setProcessor('merge', new MergeProcessor());
         $hooks->setProcessor('boolean-and', new BooleanAndProcessor());
         $hooks->setProcessor('boolean-or', new BooleanOrProcessor());
+        $hooks->processWith('one-off-processor', new FirstProcessor());
+        $hooks->processWith('one-off-callable', static fn (array $results, ProcessingContext $context): mixed => [$context->hookPoint(), $results]);
+        $hooks->processWith('one-off-class-string', BroadProcessor::class);
 
         $hooks->setRenderer('renderer-callable', static fn (array $results, ProcessingContext $context): string => $context->hookPoint() . ':' . count($results));
         $hooks->setRenderer('renderer-instance', new ConcatenateRenderer());
         $hooks->setRenderer('renderer-class-string', BroadRenderer::class);
+        $hooks->renderWith('one-off-renderer-callable', static fn (array $results, ProcessingContext $context): string => $context->hookPoint() . ':' . count($results));
+        $hooks->renderWith('one-off-renderer-instance', new ConcatenateRenderer());
+        $hooks->renderWith('one-off-renderer-class-string', BroadRenderer::class);
     }
 }
 

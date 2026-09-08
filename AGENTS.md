@@ -60,8 +60,10 @@ Treat these methods on `Magdicom\Hooks` as the supported public surface unless t
 - `processor`
 - `clearProcessor`
 - `process`
+- `processWith`
 - `setRenderer`
 - `render`
+- `renderWith`
 - `has`
 - `hasAction`
 - `hasFilter`
@@ -95,6 +97,7 @@ Collector processing contracts are collector-only. `ProcessingContext` must stay
 `Hooks` must not pretend collector callback result types are statically linked to processor generic raw-result types. Narrower custom processor or renderer generics are fine on the implementations themselves, but `setProcessor()` and `setRenderer()` should stay documented against broad `list<mixed>` collector results until a future typed-endpoint design exists.
 Processor registration is collector-only. `collect()` must remain raw, while `process()` uses the configured processor for that collector endpoint.
 Renderer registration must reuse the same processor slot. `render()` requires a renderer and returns a string, while `collect()` continues to bypass that shared slot entirely.
+`processWith()` and `renderWith()` are one-off collector finalization APIs. They must collect raw results exactly once, use the supplied processor or renderer without storing it, ignore configured processor state, and leave any existing configuration unchanged even when the one-off processor or renderer throws.
 String processors and renderers that PHP recognizes as callables, such as named functions and static method strings, must execute directly before non-callable strings are treated as resolver-backed class references.
 Do not add hidden metadata just to remember whether a callable entered the shared slot through `setProcessor()` or `setRenderer()`. Callable behavior must follow the runtime contract of the method being invoked.
 Callable renderers must be validated at runtime so non-string output fails with `InvalidRendererException` instead of an incidental `TypeError`.

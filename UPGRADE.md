@@ -34,6 +34,7 @@ $results = $hooks->collect('menu');
 - Shared invocation context should be passed as a typed context object when several callbacks need the same state.
 - If collected output needs post-processing, configure a collector processor and call `process()`.
 - If collected output needs string rendering, configure a collector renderer and call `render()`.
+- If a caller needs to choose the output strategy per invocation, use `processWith()` or `renderWith()` instead of configuring the hook point persistently.
 
 ## Beta-to-Beta Namespace Changes
 
@@ -91,6 +92,7 @@ These version-1 APIs are no longer available in 2.0:
 - `collect()` always returns raw one-entry-per-callback results, even when a processor or renderer is configured.
 - `process()` throws `Magdicom\Exceptions\MissingProcessorException` when no collector processor is configured.
 - `render()` throws `Magdicom\Exceptions\MissingRendererException` when no collector renderer is configured.
+- `processWith()` and `renderWith()` use the supplied processor or renderer for one call only and do not read, write, replace, or clear persistent processor configuration.
 - `setProcessor()` and `setRenderer()` replace the same collector processing slot.
 - `render()` throws `Magdicom\Exceptions\InvalidRendererException` when the shared slot contains a non-renderer processor, a resolved class of the wrong type, or a callable that returns a non-string value.
 - Equal-priority listeners keep registration order.

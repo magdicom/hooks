@@ -203,6 +203,36 @@ class Hooks
         );
     }
 
+    /**
+     * @param ProcessorReference $processor
+     */
+    public function processWith(
+        string $hookPoint,
+        ResultProcessor|callable|string $processor,
+        mixed ...$arguments,
+    ): mixed {
+        return $this->invokeProcessor(
+            $processor,
+            $this->collect($hookPoint, ...$arguments),
+            new ProcessingContext($hookPoint, ...$arguments)
+        );
+    }
+
+    /**
+     * @param RendererReference $renderer
+     */
+    public function renderWith(
+        string $hookPoint,
+        Renderer|callable|string $renderer,
+        mixed ...$arguments,
+    ): string {
+        return $this->invokeRenderer(
+            $renderer,
+            $this->collect($hookPoint, ...$arguments),
+            new ProcessingContext($hookPoint, ...$arguments)
+        );
+    }
+
     public function has(string $hookPoint): bool
     {
         return $this->findAnyHookPointData($hookPoint) !== null;
