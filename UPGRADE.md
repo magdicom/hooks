@@ -56,6 +56,16 @@ These namespace changes were made before stable 2.0 to establish a clean long-te
 | `Magdicom\MissingRendererException` | `Magdicom\Exceptions\MissingRendererException` |
 | `Magdicom\NativeResolver` | `Magdicom\Resolvers\NativeResolver` |
 
+## Beta-to-Beta Debugging API Removal
+
+The legacy mutable debugging/source-file API was removed before stable 2.0:
+
+- `debug()`
+- `setSourceFile()`
+- `getSourceFile()`
+
+These methods came from the version-1 runtime model and are not replaced by a core observer, logger, event dispatcher, endpoint-definition system, or debugging abstraction. Instrument hook registrations and invocations in application code when a project needs runtime tracing.
+
 ## Signature Changes
 
 Version 2 dispatch uses natural variadic arguments:

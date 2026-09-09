@@ -11,46 +11,46 @@ use Magdicom\Processors\MergeProcessor;
 test('README processor example stays valid', function () {
     $hooks = new Hooks();
 
-    $hooks->addCollector('report', fn (): string => 'first');
-    $hooks->addCollector('report', fn (): string => 'second');
+    $hooks->addCollector('dashboard.widgets', fn (): string => 'invoices');
+    $hooks->addCollector('dashboard.widgets', fn (): string => 'revenue');
 
-    $hooks->setProcessor('report', static function (array $results, ProcessingContext $context): string {
-        expect($context->hookPoint())->toBe('report')
+    $hooks->setProcessor('dashboard.widgets', static function (array $results, ProcessingContext $context): string {
+        expect($context->hookPoint())->toBe('dashboard.widgets')
             ->and($context->arguments())->toBe([]);
 
         return implode(', ', $results);
     });
 
-    expect($hooks->collect('report'))->toBe(['first', 'second'])
-        ->and($hooks->process('report'))->toBe('first, second');
+    expect($hooks->collect('dashboard.widgets'))->toBe(['invoices', 'revenue'])
+        ->and($hooks->process('dashboard.widgets'))->toBe('invoices, revenue');
 });
 
 test('README renderer example stays valid', function () {
     $hooks = new Hooks();
 
-    $hooks->addCollector('report', fn (): string => 'first');
-    $hooks->addCollector('report', fn (): string => 'second');
+    $hooks->addCollector('dashboard.widgets', fn (): string => 'invoices');
+    $hooks->addCollector('dashboard.widgets', fn (): string => 'revenue');
 
-    $hooks->setRenderer('report', new ConcatenateRenderer());
+    $hooks->setRenderer('dashboard.widgets', new ConcatenateRenderer());
 
-    expect($hooks->render('report'))->toBe('firstsecond');
+    expect($hooks->render('dashboard.widgets'))->toBe('invoicesrevenue');
 
-    $hooks->setRenderer('report', new ConcatenateRenderer(' | '));
+    $hooks->setRenderer('dashboard.widgets', new ConcatenateRenderer(' | '));
 
-    expect($hooks->render('report'))->toBe('first | second');
+    expect($hooks->render('dashboard.widgets'))->toBe('invoices | revenue');
 
-    $hooks->setRenderer('report', static function (array $results, ProcessingContext $context): string {
-        expect($context->hookPoint())->toBe('report')
+    $hooks->setRenderer('dashboard.widgets', static function (array $results, ProcessingContext $context): string {
+        expect($context->hookPoint())->toBe('dashboard.widgets')
             ->and($context->arguments())->toBe([]);
 
         return implode(', ', $results);
     });
 
-    expect($hooks->render('report'))->toBe('first, second');
+    expect($hooks->render('dashboard.widgets'))->toBe('invoices, revenue');
 
-    $hooks->setProcessor('report', new FirstProcessor());
+    $hooks->setProcessor('dashboard.widgets', new FirstProcessor());
 
-    expect($hooks->process('report'))->toBe('first');
+    expect($hooks->process('dashboard.widgets'))->toBe('invoices');
 });
 
 test('README flatten processor example stays valid', function () {

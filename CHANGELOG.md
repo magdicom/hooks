@@ -2,10 +2,18 @@
 
 ## Unreleased
 
+## v2.0.0-beta.2 - 2026-09-09
+
+Version 2.0 remains intentionally breaking, and this beta does not preserve obsolete beta-1 namespaces or version-1-era debugging APIs.
+
+- organize public beta namespaces under `Magdicom\Exceptions`, `Magdicom\Processors`, and `Magdicom\Resolvers`
+- add one-off collector finalization through `processWith()` and `renderWith()` without reading, storing, replacing, or clearing persistent processor or renderer configuration
+- remove the legacy `debug()`, `setSourceFile()`, and `getSourceFile()` API plus the related mutable debug/source-file state
 - align README and Composer package positioning around "Hooks — Extension points for PHP"
-- add one-off collector finalization through `processWith()` and `renderWith()` without mutating persistent processor or renderer configuration
-- move package exceptions to `Magdicom\Exceptions`, built-in processors and renderers to `Magdicom\Processors`, and `NativeResolver` to `Magdicom\Resolvers` before stable 2.0
-- add architecture regression coverage for PSR-4 namespace/path alignment, public class autoloadability, and removal of obsolete beta namespace references
+- update Composer metadata to use the documentation website as the homepage and Mohamed Magdi as the package author
+- remove the Dependabot auto-merge workflow so dependency pull requests remain reviewable
+- add architecture regression coverage for PSR-4 namespace/path alignment, public class autoloadability, removal of obsolete beta namespace references, and the removed debugging/source-file API
+- simplify `Hooks` internals by deleting now-unused logging, callback-description, and debug output formatting machinery
 
 ## v2.0.0-beta.1 - 2026-09-07
 

@@ -42,15 +42,15 @@ use Magdicom\Hooks;
 $hooks = new Hooks();
 $events = [];
 
-$hooks->addAction('boot', function (string $name) use (&$events): void {
-    $events[] = 'prepare:' . $name;
+$hooks->addAction('invoice.paid', function (int $invoiceId) use (&$events): void {
+    $events[] = 'receipt:' . $invoiceId;
 }, 10);
 
-$hooks->addAction('boot', function (string $name) use (&$events): void {
-    $events[] = 'finish:' . $name;
+$hooks->addAction('invoice.paid', function (int $invoiceId) use (&$events): void {
+    $events[] = 'ledger:' . $invoiceId;
 }, 20);
 
-$hooks->doAction('boot', 'hooks');
+$hooks->doAction('invoice.paid', 42);
 
 var_dump($events);
 ```
@@ -62,11 +62,11 @@ use Magdicom\Hooks;
 
 $hooks = new Hooks();
 
-$hooks->addFilter('title', fn (string $value): string => trim($value), 10);
-$hooks->addFilter('title', fn (string $value, string $suffix): string => $value . $suffix, 20);
-$hooks->addFilter('title', fn (string $value): string => strtoupper($value), 30);
+$hooks->addFilter('invoice.total', fn (int $total): int => max(0, $total), 10);
+$hooks->addFilter('invoice.total', fn (int $total, int $tax): int => $total + $tax, 20);
+$hooks->addFilter('invoice.total', fn (int $total): int => $total + 500, 30);
 
-echo $hooks->applyFilters('title', ' hello ', '!');
+echo $hooks->applyFilters('invoice.total', 10000, 1200);
 ```
 
 ### Collectors
@@ -76,11 +76,11 @@ use Magdicom\Hooks;
 
 $hooks = new Hooks();
 
-$hooks->addCollector('report', fn (): array => ['id' => 1], 10);
-$hooks->addCollector('report', fn (): array => ['id' => 2], 20);
-$hooks->addCollector('report', fn (): string => 'done', 30);
+$hooks->addCollector('dashboard.widgets', fn (): string => 'invoices', 10);
+$hooks->addCollector('dashboard.widgets', fn (): string => 'revenue', 20);
+$hooks->addCollector('dashboard.widgets', fn (): string => 'alerts', 30);
 
-var_dump($hooks->collect('report'));
+var_dump($hooks->collect('dashboard.widgets'));
 ```
 
 ## Registration and Removal
@@ -95,14 +95,14 @@ use Magdicom\Hooks;
 
 $hooks = new Hooks();
 
-$boot = fn (): null => null;
-$handle = $hooks->addAction('boot', $boot, 10);
+$listener = fn (): null => null;
+$handle = $hooks->addAction('invoice.paid', $listener, 10);
 
-var_dump($hooks->has('boot'));
-var_dump($hooks->hasAction('boot', $boot));
-var_dump($hooks->count('boot'));
-var_dump($hooks->listeners('boot'));
-var_dump($hooks->actions('boot'));
+var_dump($hooks->has('invoice.paid'));
+var_dump($hooks->hasAction('invoice.paid', $listener));
+var_dump($hooks->count('invoice.paid'));
+var_dump($hooks->listeners('invoice.paid'));
+var_dump($hooks->actions('invoice.paid'));
 
 $handle->remove();
 ```
@@ -156,11 +156,11 @@ use Magdicom\Hooks;
 
 $hooks = new Hooks();
 
-$hooks->addAction('greet', function (string $prefix, string $name): void {
+$hooks->addAction('customer.greeted', function (string $prefix, string $name): void {
     echo $prefix . ' ' . $name;
 });
 
-$hooks->doAction('greet', 'Hello', 'world');
+$hooks->doAction('customer.greeted', 'Hello', 'world');
 ```
 
 ### Typed Context Objects
@@ -177,11 +177,11 @@ class GreetingContext
 
 $hooks = new Hooks();
 
-$hooks->addCollector('collector-object', function (GreetingContext $context, string $name): array {
+$hooks->addCollector('customer.greetings', function (GreetingContext $context, string $name): array {
     return [$context->id, $name];
 });
 
-var_dump($hooks->collect('collector-object', new GreetingContext(100), 'Bar'));
+var_dump($hooks->collect('customer.greetings', new GreetingContext(100), 'Bar'));
 ```
 
 When several callbacks need shared state, pass an explicit typed context object rather than relying on a global parameter bag.
@@ -267,15 +267,15 @@ use Magdicom\ResultProcessor;
 
 $hooks = new Hooks();
 
-$hooks->addCollector('report', fn (): string => 'first');
-$hooks->addCollector('report', fn (): string => 'second');
+$hooks->addCollector('dashboard.widgets', fn (): string => 'invoices');
+$hooks->addCollector('dashboard.widgets', fn (): string => 'revenue');
 
-$hooks->setProcessor('report', static function (array $results, ProcessingContext $context): string {
+$hooks->setProcessor('dashboard.widgets', static function (array $results, ProcessingContext $context): string {
     return implode(', ', $results);
 });
 
-var_dump($hooks->collect('report'));
-echo $hooks->process('report');
+var_dump($hooks->collect('dashboard.widgets'));
+echo $hooks->process('dashboard.widgets');
 ```
 
 If no processor is configured for a collector endpoint, `process()` throws `Magdicom\Exceptions\MissingProcessorException`.
@@ -403,19 +403,19 @@ use Magdicom\Processors\MergeProcessor;
 
 $hooks = new Hooks();
 
-$hooks->addCollector('report', fn (): string => 'first');
-$hooks->addCollector('report', fn (): string => 'second');
+$hooks->addCollector('dashboard.widgets', fn (): string => 'invoices');
+$hooks->addCollector('dashboard.widgets', fn (): string => 'revenue');
 
-$hooks->setRenderer('report', new ConcatenateRenderer());
-echo $hooks->render('report');
+$hooks->setRenderer('dashboard.widgets', new ConcatenateRenderer());
+echo $hooks->render('dashboard.widgets');
 
-$hooks->setRenderer('report', new ConcatenateRenderer(' | '));
-echo $hooks->render('report');
+$hooks->setRenderer('dashboard.widgets', new ConcatenateRenderer(' | '));
+echo $hooks->render('dashboard.widgets');
 
-$hooks->setRenderer('report', static function (array $results, ProcessingContext $context): string {
+$hooks->setRenderer('dashboard.widgets', static function (array $results, ProcessingContext $context): string {
     return implode(', ', $results);
 });
-echo $hooks->render('report');
+echo $hooks->render('dashboard.widgets');
 
 $hooks->setProcessor('navigation', new FlattenProcessor());
 var_dump($hooks->process('navigation'));
@@ -426,58 +426,18 @@ var_dump($hooks->process('configuration'));
 $hooks->setProcessor('requirements', new BooleanAndProcessor());
 var_dump($hooks->process('requirements'));
 
-$hooks->setProcessor('report', new FirstProcessor());
-var_dump($hooks->process('report'));
+$hooks->setProcessor('dashboard.widgets', new FirstProcessor());
+var_dump($hooks->process('dashboard.widgets'));
 ```
 
 `render()` is a string-only convenience for collector endpoints that are configured with a renderer.
 The examples in this section are covered by automated tests so the documented signatures and behaviors stay aligned with the shipped API.
-
-## Debugging
-
-`debug()` and `setSourceFile()` remain available.
-
-```php
-use Magdicom\Hooks;
-
-$hooks = new Hooks();
-
-$hooks->debug(function (string $message): void {
-    echo $message . PHP_EOL;
-});
-
-$hooks->setSourceFile('/path/to/file.php');
-$hooks->addAction('greeting', 'FooBar::log');
-$hooks->doAction('greeting');
-```
 
 ## Deferred to Later Milestones
 
 The current branch does not yet implement:
 
 - framework-specific integrations
-
-## Upgrading from 1.x
-
-Version `2.0` removes the legacy `register()` / `all()` dispatch model entirely.
-
-- Side-effect callbacks should move to `addAction()` / `doAction()`.
-- Sequential value transformations should move to `addFilter()` / `applyFilters()`.
-- Output aggregation should move to `addCollector()` / `collect()`.
-- Global parameter arrays should move to explicit invocation arguments or typed context objects.
-- Optional collector post-processing should move to `setProcessor()` / `process()`.
-- Optional collector string rendering should move to `setRenderer()` / `render()`.
-
-Example migration:
-
-```php
-// Version 1
-$hooks->register('menu', $callback)->all('menu')->toArray();
-
-// Version 2
-$hooks->addCollector('menu', $callback);
-$results = $hooks->collect('menu');
-```
 
 ## Testing
 
@@ -497,7 +457,7 @@ See [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 ## Credits
 
-- [Mohamed Magdi](https://github.com/magdicom)
+- [Mohamed Magdi](https://momagdi.com)
 
 ## License
 

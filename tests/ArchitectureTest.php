@@ -70,7 +70,8 @@ test('all public classes and interfaces are autoloadable from their stable names
 test('hooks exposes the expected public methods without processor-specific shortcuts', function () {
     $methods = get_class_methods(Hooks::class);
 
-    expect($methods)->toContain(
+    expect($methods)->toEqualCanonicalizing([
+        '__construct',
         'addAction',
         'doAction',
         'addFilter',
@@ -102,18 +103,7 @@ test('hooks exposes the expected public methods without processor-specific short
         'removeAllActions',
         'removeAllFilters',
         'removeAllCollectors',
-        'debug',
-        'setSourceFile',
-        'getSourceFile',
-    )
-        ->and($methods)->not->toContain('first')
-        ->and($methods)->not->toContain('last')
-        ->and($methods)->not->toContain('firstNonNull')
-        ->and($methods)->not->toContain('flatten')
-        ->and($methods)->not->toContain('merge')
-        ->and($methods)->not->toContain('booleanAnd')
-        ->and($methods)->not->toContain('booleanOr')
-        ->and($methods)->not->toContain('concatenate');
+    ]);
 });
 
 test('old beta namespaces are not retained through aliases or shims', function () {
@@ -170,4 +160,25 @@ test('documentation and fixtures do not contain old beta namespace examples', fu
             ->and($contents)->not->toContain('Magdicom\\MissingProcessorException')
             ->and($contents)->not->toContain('Magdicom\\MissingRendererException');
     }
+});
+
+test('documentation does not advertise legacy debugging source-file api', function () {
+    $root = dirname(__DIR__);
+    $paths = [
+        '/AGENTS.md',
+        '/README.md',
+    ];
+
+    foreach ($paths as $path) {
+        $contents = file_get_contents($root . $path);
+
+        expect($contents)->not->toContain('setSourceFile')
+            ->and($contents)->not->toContain('getSourceFile');
+    }
+
+    $upgrade = file_get_contents($root . '/UPGRADE.md');
+
+    expect($upgrade)->toContain('debug()')
+        ->and($upgrade)->toContain('setSourceFile()')
+        ->and($upgrade)->toContain('getSourceFile()');
 });

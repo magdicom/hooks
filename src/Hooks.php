@@ -47,15 +47,6 @@ class Hooks
 
     private int $nextRegistrationId = 1;
 
-    private bool $debug = false;
-
-    /**
-     * @var (callable(string): void)|null
-     */
-    private mixed $debugCallback = null;
-
-    private ?string $sourceFile = null;
-
     public function __construct(?Resolver $resolver = null)
     {
         $this->resolver = $resolver ?? new NativeResolver();
@@ -712,8 +703,6 @@ class Hooks
             'callback' => $callback,
         ];
 
-        $this->log('Register', $hookPoint, $callback, $priority, $type);
-
         return $this->createHandleFromRegistration($type, $hookPoint, [
             'id' => $registrationId,
             'priority' => $priority,
@@ -759,8 +748,6 @@ class Hooks
             }
         );
 
-        $this->log('Sort', $hookPoint, $type);
-
         $this->hookPoints[$type][$hookPoint]['sorted'] = true;
 
         return $this;
@@ -801,127 +788,5 @@ class Hooks
             'filter' => 'filter',
             'collector' => 'collector',
         ];
-    }
-
-    /**
-     * @return $this
-     */
-    public function debug(callable|null $callback): self
-    {
-        $this->debug = is_callable($callback);
-        $this->debugCallback = $callback;
-
-        return $this;
-    }
-
-    /**
-     * @return $this
-     */
-    public function setSourceFile(?string $path = null): self
-    {
-        $this->sourceFile = $path;
-
-        $this->log('SourceFile');
-
-        return $this;
-    }
-
-    public function getSourceFile(): string
-    {
-        return $this->sourceFile ?? 'Unknown';
-    }
-
-    /**
-     * @return $this
-     */
-    private function log(string $type, mixed ...$data): self
-    {
-        if (! $this->debug) {
-            return $this;
-        }
-
-        $message = '';
-
-        switch ($type) {
-            case 'SourceFile':
-                $message = '+ Added Source File: ' . $this->getSourceFile();
-
-                break;
-            case 'Register':
-                $callback = $this->normalizeCallback($data[1] ?? null);
-                if (! isset($data[0], $data[2]) || $callback === null) {
-                    return $this;
-                }
-
-                $message = join(PHP_EOL, [
-                    '+ Hook Point: ' . $this->stringifyOutput($data[0]) . ', New Callback Defined:',
-                    "\t-- Type: " . $this->stringifyOutput($data[3] ?? 'action'),
-                    "\t-- Source: " . $this->getSourceFile(),
-                    "\t-- Callback: " . $this->getCallbackInfo($callback),
-                    "\t-- Priority: " . $this->stringifyOutput($data[2]),
-                ]);
-
-                break;
-            case 'Sort':
-                $message = '+ Hook Point: ' . $this->stringifyOutput($data[0] ?? '') . ', Callback Functions Sorted For ' . $this->stringifyOutput($data[1] ?? 'action') . '!';
-
-                break;
-        }
-
-        if ($message === '' || $this->debugCallback === null) {
-            return $this;
-        }
-
-        call_user_func($this->debugCallback, $message);
-
-        return $this;
-    }
-
-    /**
-     * @param HookCallback $callback
-     * @throws \ReflectionException
-     */
-    private function getCallbackInfo(array|callable $callback): string
-    {
-        if (is_array($callback)) {
-            if (is_object($callback[0])) {
-                return (new \ReflectionClass($callback[0]))->getName() . '::' . $callback[1];
-            }
-
-            return $callback[0] . '::' . $callback[1];
-        }
-
-        if (is_string($callback)) {
-            return $callback;
-        }
-
-        if (is_object($callback) && ! $callback instanceof \Closure) {
-            return $callback::class;
-        }
-
-        if ($callback instanceof \Closure) {
-            return (new \ReflectionFunction($callback))->getName();
-        }
-
-        return 'callable';
-    }
-
-    private function stringifyOutput(mixed $output): string
-    {
-        if ($output === null || is_scalar($output)) {
-            return (string) $output;
-        }
-
-        if (is_object($output) && method_exists($output, '__toString')) {
-            return (string) $output;
-        }
-
-        if (is_array($output)) {
-            $encoded = json_encode($output);
-
-            return $encoded === false ? 'Array' : $encoded;
-        }
-
-        return get_debug_type($output);
     }
 }

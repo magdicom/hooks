@@ -80,9 +80,6 @@ Treat these methods on `Magdicom\Hooks` as the supported public surface unless t
 - `removeAllActions`
 - `removeAllFilters`
 - `removeAllCollectors`
-- `debug`
-- `setSourceFile`
-- `getSourceFile`
 
 Treat `Magdicom\RegistrationHandle`, `Magdicom\Resolver`, `Magdicom\Resolvers\NativeResolver`, `Magdicom\ProcessingContext`, `Magdicom\ResultProcessor`, `Magdicom\Renderer`, `Magdicom\Exceptions\MissingProcessorException`, `Magdicom\Exceptions\MissingRendererException`, `Magdicom\Exceptions\InvalidProcessorException`, `Magdicom\Exceptions\InvalidRendererException`, and the built-ins under `Magdicom\Processors\` as public as well.
 
@@ -111,6 +108,7 @@ Invalid class-based processor and renderer resolution should fail with explicit 
 ## 2.0 Constraints
 
 - Do not reintroduce version-1 compatibility APIs or output buffering.
+- Do not reintroduce the legacy debug/source-file API or mutable debug state.
 - Keep the runtime framework-independent.
 - Preserve deterministic listener ordering.
 - Preserve listener snapshot behavior during dispatch.
