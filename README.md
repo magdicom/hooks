@@ -1,25 +1,24 @@
-# PHP Hooks
+# Hooks — Extension points for PHP
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/magdicom/hooks.svg?style=flat-square)](https://packagist.org/packages/magdicom/hooks)
 [![Tests](https://github.com/magdicom/hooks/actions/workflows/run-tests.yml/badge.svg?branch=2.0)](https://github.com/magdicom/hooks/actions/workflows/run-tests.yml)
 [![Total Downloads](https://img.shields.io/packagist/dt/magdicom/hooks.svg?style=flat-square)](https://packagist.org/packages/magdicom/hooks)
 
-`magdicom/hooks` is a lightweight, framework-independent PHP hooks package with actions, filters, collectors, processors, and renderers.
+`magdicom/hooks` provides named extension points for PHP with actions, filters, collectors, processors, and renderers.
+
+Hooks lets libraries and applications expose explicit places where outside code can participate without coupling the core package to a framework, container, or global runtime state.
 
 Version `2.0` is an intentionally breaking release. If you are upgrading from `1.x` or an earlier `2.0` beta, read [UPGRADE.md](UPGRADE.md) before migrating code.
 
-The `2.0` branch currently exposes three explicit hook models:
+The core package is framework-independent. Laravel integration is available through [`magdicom/laravel-hooks`](https://github.com/magdicom/laravel-hooks), and complete documentation is available at [hooks.momagdi.com](https://hooks.momagdi.com).
 
-- actions for side effects
-- filters for sequential value transformation
-- collectors for raw result gathering
+Use the hook model that matches the extension point:
 
-Collectors can optionally be finalized with processors or renderers after raw collection:
-
-- actions are synchronous side-effect extension points
-- filters are ordered value transformations
+- actions run side effects
+- filters transform values sequentially
 - collectors gather independent contributions
-- processors and renderers finalize collected contributions
+
+Processors and renderers handle collector results when raw contributions need to be finalized into another value or string output.
 
 The action and filter terminology is inspired by the WordPress hooks system. This package is independently implemented and is not affiliated with or endorsed by WordPress or the WordPress Foundation.
 
